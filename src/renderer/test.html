@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Page</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f0f0;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #6366f1;
+      margin-bottom: 20px;
+    }
+    .test-item {
+      padding: 16px;
+      margin: 12px 0;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+    .success {
+      color: #10b981;
+    }
+    .error {
+      color: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Remote Desktop Manager - Test Page</h1>
+    <div class="test-item">
+      <strong>Test 1:</strong> HTML rendering works
+    </div>
+    <div class="test-item">
+      <strong>Test 2:</strong> CSS styling works
+    </div>
+    <div class="test-item">
+      <strong>Test 3:</strong> JavaScript loading...
+      <span id="js-test"></span>
+    </div>
+  </div>
+  <script>
+    document.getElementById('js-test').textContent = '✓ JavaScript works!';
+    document.getElementById('js-test').className = 'success';
+  </script>
+</body>
+</html>

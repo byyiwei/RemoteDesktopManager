@@ -1,0 +1,36 @@
+appId: com.rdm.manager
+productName: Windows运维远程桌面管理工具
+forceCodeSigning: false
+asar: true
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - package.json
+  - "out/main/**/*"
+  - "out/preload/**/*"
+  - "out/renderer/**/*"
+  - "resources/icon.ico"
+
+extraResources:
+  - from: "resources/"
+    to: "resources/"
+
+win:
+  target: nsis
+  icon: resources/icon.ico
+  signAndEditExecutable: false
+  artifactName: ${productName}-${version}.${ext}
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  language: 2052
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Windows运维远程桌面管理工具
+  perMachine: false

@@ -1,0 +1,50 @@
+{
+  "name": "remote-desktop-manager",
+  "version": "1.0.0",
+  "description": "Windows运维远程桌面管理工具 v1.0.0 - 高效管理远程桌面连接",
+  "main": "./out/main/index.js",
+  "author": "RDM Team",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "dist": "electron-vite build && electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.2.6",
+    "antd": "^5.12.8",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "electron-vite": "^2.0.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  },
+  "build": {
+    "appId": "com.rdm.manager",
+    "productName": "Windows运维远程桌面管理工具",
+    "forceCodeSigning": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "resources/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "resources/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "远程桌面管理工具.exe"
+    }
+  }
+}
