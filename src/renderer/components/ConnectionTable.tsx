@@ -27,6 +27,7 @@ interface Props {
   connections: ConnectionDisplay[]
   loading: boolean
   connectingId: string | null
+  selectedIndex: number
   revealedPasswords: Record<string, string>
   onEdit: (c: ConnectionDisplay) => void
   onDelete: (id: string) => void
@@ -35,7 +36,7 @@ interface Props {
 }
 
 const ConnectionTable: React.FC<Props> = ({
-  connections, loading, connectingId, revealedPasswords,
+  connections, loading, connectingId, selectedIndex, revealedPasswords,
   onEdit, onDelete, onConnect, onViewPassword
 }) => {
 
@@ -66,14 +67,14 @@ const ConnectionTable: React.FC<Props> = ({
 
   return (
     <div className="connection-grid">
-      {connections.map((r) => {
+      {connections.map((r, i) => {
         const isConnecting = connectingId === r.id
         const isDisabled = connectingId !== null && !isConnecting
 
         return (
           <div
             key={r.id}
-            className={`connection-card ${isConnecting ? 'connection-card-connecting' : ''}`}
+            className={`connection-card ${isConnecting ? 'connection-card-connecting' : ''} ${selectedIndex === i ? 'connection-card-selected' : ''}`}
             onDoubleClick={() => {
               if (!connectingId) onConnect(r.id)
             }}

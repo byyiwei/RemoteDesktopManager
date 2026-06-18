@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QFileDialog, QMenu, QGraphicsDropShadowEffect, QToolButton,
 )
 from PyQt6.QtCore import Qt, QSize, QPoint, QTimer, pyqtSignal, QPropertyAnimation
-from PyQt6.QtGui import QFont, QCursor, QColor, QPalette, QLinearGradient, QBrush
+from PyQt6.QtGui import QFont, QCursor, QColor, QPalette, QLinearGradient, QBrush, QIcon, QKeyEvent
 
 from .models import Connection, BASTION_HOST_OPTIONS
 from .store import ConnectionStore
@@ -51,6 +51,25 @@ class Icons:
     SERVER = "🖥️"
     NETWORK = "🌐"
     SHIELD = "🛡️"
+
+
+# ======================== 自定义搜索输入框 ========================
+class SearchLineEdit(QLineEdit):
+    """支持上下键和回车的搜索输入框"""
+    navigate_up = pyqtSignal()
+    navigate_down = pyqtSignal()
+    activate_selected = pyqtSignal()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        key = event.key()
+        if key == Qt.Key.Key_Up:
+            self.navigate_up.emit()
+        elif key == Qt.Key.Key_Down:
+            self.navigate_down.emit()
+        elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.activate_selected.emit()
+        else:
+            super().keyPressEvent(event)
 
 
 # ======================== 连接卡片 ========================
@@ -780,6 +799,8 @@ class MainWindow(QMainWindow):
         self._connecting_id: Optional[str] = None
         self._connecting_proc = None
         self._connect_timer = None
+        self._selected_index = -1  # 搜索键盘导航选中索引
+        self._connection_cards: List[ConnectionCard] = []  # 当前显示的连接卡片
 
         self._setup_ui()
         self._apply_global_theme()
@@ -821,11 +842,14 @@ class MainWindow(QMainWindow):
         search_icon.setObjectName("searchIcon")
         search_layout.addWidget(search_icon)
 
-        self.search_input = QLineEdit()
+        self.search_input = SearchLineEdit()
         self.search_input.setObjectName("searchInput")
-        self.search_input.setPlaceholderText("搜索名称或 IP 地址...")
-        self.search_input.setFixedWidth(280)
+        self.search_input.setPlaceholderText("搜索名称或 IP 地址...（↑↓选择，回车连接）")
+        self.search_input.setFixedWidth(320)
         self.search_input.textChanged.connect(self._on_search)
+        self.search_input.navigate_up.connect(self._navigate_up)
+        self.search_input.navigate_down.connect(self._navigate_down)
+        self.search_input.activate_selected.connect(self._activate_selected)
         search_layout.addWidget(self.search_input)
 
         toolbar_layout.addWidget(search_frame)
@@ -1073,6 +1097,9 @@ class MainWindow(QMainWindow):
 
     def _load_connections(self):
         """加载连接列表"""
+        self._selected_index = -1  # 重置选中索引
+        self._connection_cards = []  # 清空卡片列表
+
         while self.content_layout.count():
             item = self.content_layout.takeAt(0)
             if item.widget():
@@ -1132,6 +1159,58 @@ class MainWindow(QMainWindow):
             row = i // 3
             col = i % 3
             self.content_layout.addWidget(card, row, col)
+            self._connection_cards.append(card)
+
+    def _update_card_highlight(self):
+        """更新卡片高亮状态"""
+        for i, card in enumerate(self._connection_cards):
+            is_selected = (i == self._selected_index)
+            card.setProperty("selected", is_selected)
+            # 更新边框样式以显示高亮
+            c = theme_manager.colors
+            if is_selected:
+                card.setStyleSheet(f"""
+                    QFrame#connectionCard {{
+                        background: {c['bg_white']};
+                        border: 2px solid {c['primary']};
+                        border-radius: 16px;
+                    }}
+                """)
+                # 滚动到选中的卡片
+                card.ensureVisible(0, 0) if hasattr(card, 'ensureVisible') else None
+            else:
+                card._apply_theme()  # 恢复默认样式
+
+    def _navigate_up(self):
+        """键盘上键：向上选择"""
+        if not self._connection_cards:
+            return
+        if self._selected_index <= 0:
+            self._selected_index = len(self._connection_cards) - 1
+        else:
+            self._selected_index -= 1
+        self._update_card_highlight()
+
+    def _navigate_down(self):
+        """键盘下键：向下选择"""
+        if not self._connection_cards:
+            return
+        if self._selected_index >= len(self._connection_cards) - 1:
+            self._selected_index = 0
+        else:
+            self._selected_index += 1
+        self._update_card_highlight()
+
+    def _activate_selected(self):
+        """回车键：连接选中的服务器"""
+        if self._selected_index < 0 or self._selected_index >= len(self._connection_cards):
+            # 如果没有选中但只有一个卡片，自动连接
+            if len(self._connection_cards) == 1:
+                card = self._connection_cards[0]
+                self._on_connect(card.connection.id)
+            return
+        card = self._connection_cards[self._selected_index]
+        self._on_connect(card.connection.id)
 
     def _on_search(self):
         self._load_connections()
@@ -1318,9 +1397,21 @@ def run_app():
     app = QApplication(sys.argv)
     
     # 设置应用属性
-    app.setApplicationName("远程桌面管理工具")
-    app.setApplicationDisplayName("远程桌面管理工具")
+    app_name = "Windows运维远程桌面管理工具"
+    app.setApplicationName(app_name)
+    app.setApplicationDisplayName(app_name)
     app.setOrganizationName("RDM")
+    
+    # 设置应用图标（任务管理器显示）
+    icon_candidates = [
+        Path(__file__).parent.parent.parent / "resources" / "icon.ico",
+        Path(__file__).parent.parent / "resources" / "icon.ico",
+        Path(__file__).parent / "assets" / "icon.ico",
+    ]
+    for icon_path in icon_candidates:
+        if icon_path.exists():
+            app.setWindowIcon(QIcon(str(icon_path)))
+            break
     
     # 创建主窗口
     window = MainWindow()

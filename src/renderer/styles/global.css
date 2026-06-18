@@ -251,12 +251,19 @@ body {
   background: var(--color-bg);
 }
 
-/* ======================== 搜索框 ======================== */
+/* ======================== 搜索组 ======================== */
+.search-group {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
 .search-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
   width: 100%;
+  min-width: 180px;
 }
 
 .search-input-wrapper .ant-input {
@@ -359,6 +366,16 @@ body {
 }
 
 .connection-card-connecting::before { opacity: 1; }
+
+/* 键盘搜索选中高亮 */
+.connection-card-selected {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary-bg) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-light), var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.connection-card-selected::before { opacity: 1; }
 
 /* 卡片内部布局：横向排列 */
 .connection-card-inner {
@@ -540,6 +557,10 @@ body {
   color: var(--color-danger);
   font-weight: 600;
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 .password-reveal-timer { font-size: 11px; color: var(--color-text-muted); margin-left: auto; }
 
@@ -850,6 +871,15 @@ body {
   margin-bottom: 8px;
 }
 
+.shortcut-search-wrapper {
+  margin-bottom: 10px;
+}
+
+.shortcut-search-input {
+  width: 100%;
+  max-width: 320px;
+}
+
 .shortcut-title {
   font-size: 12.5px;
   font-weight: 600;
@@ -1094,6 +1124,14 @@ body {
   background: var(--color-primary-bg) !important;
 }
 
+/* 键盘搜索选中高亮（快捷方式） */
+.shortcut-item-keyboard-selected {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary-bg) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-light), var(--shadow-md);
+  transform: translateY(-1px);
+}
+
 .shortcut-item-dragging {
   opacity: 0.4;
   transform: scale(0.95);
@@ -1143,4 +1181,138 @@ body {
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
+}
+
+/* ======================== 设置面板样式 ======================== */
+.settings-modal {
+  min-width: 380px;
+  max-width: 420px;
+  padding: 0;
+}
+
+.settings-modal .modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(135deg, var(--color-primary-bg), transparent);
+}
+
+.settings-modal .modal-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 16px;
+  box-shadow: 0 3px 10px rgba(99,102,241,0.3);
+}
+
+.settings-modal .modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.settings-modal .loading {
+  padding: 40px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.settings-modal .settings-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-modal .settings-section:last-of-type {
+  border-bottom: none;
+}
+
+.settings-modal .settings-section h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 0 0 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-modal .settings-section h4::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.settings-modal .ant-form-item {
+  margin-bottom: 12px;
+}
+
+.settings-modal .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.settings-modal .ant-form-item-label {
+  padding-bottom: 4px;
+}
+
+.settings-modal .ant-form-item-label > label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.settings-modal .ant-switch {
+  margin-left: 0;
+}
+
+.settings-modal .ant-switch-disabled {
+  opacity: 0.5;
+}
+
+.settings-modal .shortcut-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-hover);
+  color: var(--color-text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--transition-normal);
+}
+
+.settings-modal .shortcut-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
+}
+
+.settings-modal .shortcut-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-modal .modal-actions {
+  padding: 16px 20px;
+  border-top: 1px solid var(--color-border);
+  gap: 8px;
+}
+
+.settings-modal .modal-actions button:first-child {
+  background: var(--color-bg-hover);
+  color: var(--color-text-light);
+  border: 1px solid var(--color-border);
+}
+
+.settings-modal .modal-actions button:first-child:hover {
+  background: var(--color-border);
 }

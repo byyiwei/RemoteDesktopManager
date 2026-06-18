@@ -25,15 +25,17 @@ type ThemeMode = 'light' | 'dark' | 'system'
 interface LayoutProps {
   children: React.ReactNode
   onAdd: () => void
-  onSearch?: (keyword: string) => void
-  onSearchConnect?: () => void
+  onServerSearch?: (keyword: string) => void
+  onServerSearchConnect?: () => void
+  onServerSearchNavigate?: (direction: 'up' | 'down' | 'activate') => void
   onExport?: () => void
   onImport?: () => void
+  onSettings?: () => void
   theme?: ThemeMode
   onThemeChange?: (theme: ThemeMode) => void
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, onAdd, onSearch, onSearchConnect, onExport, onImport, theme, onThemeChange }) => {
+const Layout: React.FC<LayoutProps> = ({ children, onAdd, onServerSearch, onServerSearchConnect, onServerSearchNavigate, onExport, onImport, onSettings, theme, onThemeChange }) => {
   const [autoStart, setAutoStart] = useState(false)
   const [autoStartLoading, setAutoStartLoading] = useState(true)
   const [messageApi, contextHolder] = message.useMessage()
@@ -117,6 +119,13 @@ const Layout: React.FC<LayoutProps> = ({ children, onAdd, onSearch, onSearchConn
       label: '创建桌面快捷方式',
       onClick: handleCreateDesktopShortcut,
     },
+    { type: 'divider' },
+    {
+      key: 'system-settings',
+      icon: <SettingOutlined />,
+      label: '系统设置',
+      onClick: onSettings,
+    },
   ]
 
   return (
@@ -129,18 +138,32 @@ const Layout: React.FC<LayoutProps> = ({ children, onAdd, onSearch, onSearchConn
       {/* 工具栏 */}
       <div className="app-toolbar">
         <div className="app-toolbar-left">
-          {onSearch && (
-            <div className="search-input-wrapper">
-              <Input
-                placeholder="搜索名称或 IP（回车连接）"
-                prefix={<SearchOutlined />}
-                allowClear
-                onChange={(e) => onSearch(e.target.value)}
-                onPressEnter={onSearchConnect}
-                size="small"
-              />
-            </div>
-          )}
+          <div className="search-group">
+            {onServerSearch && (
+              <div className="search-input-wrapper">
+                <Input
+                  placeholder="搜索服务器（回车连接）"
+                  prefix={<SearchOutlined />}
+                  allowClear
+                  onChange={(e) => onServerSearch?.(e.target.value)}
+                  onPressEnter={onServerSearchConnect}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      onServerSearchNavigate?.('up')
+                    } else if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      onServerSearchNavigate?.('down')
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault()
+                      onServerSearchNavigate?.('activate')
+                    }
+                  }}
+                  size="small"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="app-toolbar-right">

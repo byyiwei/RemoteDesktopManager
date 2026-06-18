@@ -24,50 +24,30 @@ export function isEncryptionAvailable(): boolean {
 }
 
 /**
- * 加密明文密码
+ * 加密明文密码（取消加密，直接返回明文）
  * @param plaintext 明文密码字符串
- * @returns base64 编码的密文
- * @throws 当 safeStorage 不可用时抛出错误
+ * @returns 明文密码（不加密）
  */
 export function encryptPassword(plaintext: string): string {
-  if (!isEncryptionAvailable()) {
-    throw new Error(
-      '系统加密服务不可用（safeStorage 不可用）。' +
-      '请确保在 Windows 环境下运行，且用户已登录。'
-    )
-  }
-
-  if (!plaintext) {
-    return ''
-  }
-
-  const encryptedBuffer = safeStorage.encryptString(plaintext)
-  return encryptedBuffer.toString('base64')
+  return plaintext || ''
 }
 
 /**
- * 解密 base64 密文为明文密码
- * @param encryptedBase64 base64 编码的密文
+ * 解密密文为明文密码（兼容新旧数据）
+ * 新数据：直接返回明文
+ * 旧数据：尝试用safeStorage解密base64编码的加密数据
+ * @param encryptedBase64 密文或明文
  * @returns 明文密码字符串
- * @throws 当 safeStorage 不可用或解密失败时抛出错误
  */
 export function decryptPassword(encryptedBase64: string): string {
-  if (!encryptedBase64) {
-    return ''
-  }
-
-  if (!isEncryptionAvailable()) {
-    throw new Error(
-      '系统加密服务不可用（safeStorage 不可用）。' +
-      '请确保在 Windows 环境下运行，且用户已登录。'
-    )
-  }
-
+  if (!encryptedBase64) return ''
+  
   try {
-    const encryptedBuffer = Buffer.from(encryptedBase64, 'base64')
-    return safeStorage.decryptString(encryptedBuffer)
-  } catch (error) {
-    throw new Error(`密码解密失败: ${(error as Error).message}`)
+    const buffer = Buffer.from(encryptedBase64, 'base64')
+    const decrypted = safeStorage.decryptString(buffer)
+    return decrypted
+  } catch {
+    return encryptedBase64
   }
 }
 
@@ -130,18 +110,18 @@ export function portableDecrypt(encryptedBase64: string, passphrase: string): st
  * @returns 验证结果
  */
 export async function verifyWindowsPassword(password: string): Promise<{ valid: boolean; error?: string }> {
+  // 使用 .\username 格式表示本地账户，否则 Start-Process -Credential 会失败
   const username = userInfo().username
+  const domain = '.\\'  // .\ 表示本地计算机
 
   return new Promise((resolve) => {
-    // 使用 spawn 并通过 Base64 编码传递密码，避免命令注入风险
     const encodedPassword = Buffer.from(password).toString('base64')
     
     const psProcess = spawn('powershell', [
       '-NoProfile',
       '-Command',
-      // 使用 Base64 解码安全传递密码，避免命令注入
       `$password = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${encodedPassword}')) | ConvertTo-SecureString -AsPlainText -Force; ` +
-      `$cred = New-Object System.Management.Automation.PSCredential('${username}', $password); ` +
+      `$cred = New-Object System.Management.Automation.PSCredential('${domain}${username}', $password); ` +
       `try { Start-Process -FilePath 'cmd.exe' -ArgumentList '/c','exit' -Credential $cred -WindowStyle Hidden -Wait; Write-Output 'SUCCESS' } catch { Write-Error $_.Exception.Message }`
     ], {
       timeout: 15000,

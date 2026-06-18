@@ -4,23 +4,28 @@
  */
 
 import React, { useState, useRef, useCallback } from 'react'
-import { Tooltip, Switch } from 'antd'
+import { Tooltip, Switch, Input } from 'antd'
 import {
   PlusOutlined,
   DeleteOutlined,
   AppstoreOutlined,
   RocketOutlined,
   HolderOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import type { Shortcut } from '../types'
 
 interface Props {
   shortcuts: Shortcut[]
   launchingId: string | null
+  selectedIndex: number
   onAdd: () => void
   onBatchDelete: (ids: string[]) => void
   onLaunch: (id: string) => void
   onReorder: (orderedIds: string[]) => void
+  onSearch?: (keyword: string) => void
+  onSearchConnect?: () => void
+  onSearchNavigate?: (direction: 'up' | 'down' | 'activate') => void
 }
 
 /** 根据名称生成稳定的颜色（无图标时回退） */
@@ -38,10 +43,29 @@ function nameToColor(name: string): string {
 }
 
 const ShortcutGrid: React.FC<Props> = ({
-  shortcuts, launchingId, onAdd, onBatchDelete, onLaunch, onReorder
+  shortcuts, launchingId, selectedIndex, onAdd, onBatchDelete, onLaunch, onReorder, onSearch, onSearchConnect, onSearchNavigate
 }) => {
   const [editMode, setEditMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [searchValue, setSearchValue] = useState('')
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setSearchValue(value)
+    onSearch?.(value)
+  }, [onSearch])
+
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      onSearchConnect?.()
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      onSearchNavigate?.('up')
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      onSearchNavigate?.('down')
+    }
+  }, [onSearchConnect, onSearchNavigate])
 
   // 拖拉排序状态
   const dragItem = useRef<number | null>(null)
@@ -152,6 +176,18 @@ const ShortcutGrid: React.FC<Props> = ({
         </div>
       </div>
 
+      {/* 快捷启动搜索框 */}
+      <div className="shortcut-search-wrapper">
+        <Input
+          className="shortcut-search-input"
+          placeholder="搜索快捷启动"
+          prefix={<SearchOutlined />}
+          value={searchValue}
+          onChange={handleSearchChange}
+          onKeyDown={handleSearchKeyDown}
+        />
+      </div>
+
       {shortcuts.length === 0 ? (
         <div className="shortcut-empty">
           <RocketOutlined className="shortcut-empty-icon" />
@@ -174,6 +210,7 @@ const ShortcutGrid: React.FC<Props> = ({
                   editMode ? 'shortcut-item-edit' : '',
                   isSelected ? 'shortcut-item-selected' : '',
                   isDragging ? 'shortcut-item-dragging' : '',
+                  selectedIndex === index ? 'shortcut-item-keyboard-selected' : '',
                 ].filter(Boolean).join(' ')}
                 draggable={editMode}
                 onDragStart={() => handleDragStart(index)}

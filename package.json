@@ -28,7 +28,7 @@
     "vite": "^5.0.10"
   },
   "build": {
-    "appId": "com.rdm.manager",
+    "appId": "com.rdm.desktop.manager",
     "productName": "Windows运维远程桌面管理工具",
     "forceCodeSigning": false,
     "directories": {

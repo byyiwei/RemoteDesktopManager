@@ -9,6 +9,7 @@ import Layout from './components/Layout'
 import ConnectionTable from './components/ConnectionTable'
 import ConnectionForm from './components/ConnectionForm'
 import ShortcutGrid from './components/ShortcutGrid'
+import SettingsPanel from './components/SettingsPanel'
 import { useTheme } from './hooks/useTheme'
 import type {
   ConnectionDisplay,
@@ -33,17 +34,19 @@ export default function App() {
   const [editingConnection, setEditingConnection] = useState<ConnectionDisplay | null>(null)
   const [connectingId, setConnectingId] = useState<string | null>(null)
   const [messageApi, contextHolder] = message.useMessage()
-  const [searchKeyword, setSearchKeyword] = useState('')
+  // 快捷启动搜索状态
+  const [shortcutSearchKeyword, setShortcutSearchKeyword] = useState('')
+  const [shortcutSearchSelectedIndex, setShortcutSearchSelectedIndex] = useState(-1)
+  
+  // 服务器搜索状态
+  const [serverSearchKeyword, setServerSearchKeyword] = useState('')
+  const [serverSearchSelectedIndex, setServerSearchSelectedIndex] = useState(-1)
 
   // 快捷方式相关状态
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([])
   const [launchingShortcutId, setLaunchingShortcutId] = useState<string | null>(null)
 
-  // 密码查看相关状态
-  const [osPasswordModalVisible, setOsPasswordModalVisible] = useState(false)
-  const [osPassword, setOsPassword] = useState('')
-  const [osVerifying, setOsVerifying] = useState(false)
-  const [pendingPasswordId, setPendingPasswordId] = useState<string | null>(null)
+  // 密码查看相关状态（取消验证，直接显示）
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, string>>({})
 
   // 导出/导入 passphrase 弹窗
@@ -53,6 +56,9 @@ export default function App() {
   const [importModalVisible, setImportModalVisible] = useState(false)
   const [importPassphrase, setImportPassphrase] = useState('')
   const [importing, setImporting] = useState(false)
+
+  // 设置面板
+  const [settingsVisible, setSettingsVisible] = useState(false)
 
   // ---- 初始化 ----
   useEffect(() => {
@@ -110,15 +116,15 @@ export default function App() {
   }, [])
 
   // ---- 搜索过滤 ----
-  const filteredConnections = searchKeyword
+  const filteredConnections = serverSearchKeyword
     ? connections.filter(c =>
-        c.clientName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        c.ipAddress.toLowerCase().includes(searchKeyword.toLowerCase())
+        c.clientName.toLowerCase().includes(serverSearchKeyword.toLowerCase()) ||
+        c.ipAddress.toLowerCase().includes(serverSearchKeyword.toLowerCase())
       )
     : connections
 
-  const filteredShortcuts = searchKeyword
-    ? shortcuts.filter(s => s.name.toLowerCase().includes(searchKeyword.toLowerCase()))
+  const filteredShortcuts = shortcutSearchKeyword
+    ? shortcuts.filter(s => s.name.toLowerCase().includes(shortcutSearchKeyword.toLowerCase()))
     : shortcuts
 
   // ---- 所有处理函数使用 useCallback 但避免互相引用 ----
@@ -173,47 +179,54 @@ export default function App() {
       setEditingConnection(null)
     }, []),
 
-    search: useCallback((keyword: string) => {
-      setSearchKeyword(keyword.trim())
+    // 快捷启动搜索
+    shortcutSearch: useCallback((keyword: string) => {
+      setShortcutSearchKeyword(keyword.trim())
+      setShortcutSearchSelectedIndex(-1)
     }, []),
 
-    searchConnect: useCallback(() => {
-      if (!searchKeyword.trim()) {
+    shortcutSearchConnect: useCallback(() => {
+      if (!shortcutSearchKeyword.trim()) {
         messageApi.info('请先输入搜索关键词')
         return
       }
-      const kw = searchKeyword.toLowerCase()
+      const kw = shortcutSearchKeyword.toLowerCase()
+      const filteredShort = shortcuts.filter(s => s.name.toLowerCase().includes(kw))
+      
+      if (filteredShort.length === 0) {
+        messageApi.info('未找到匹配的快捷启动')
+      } else if (filteredShort.length === 1) {
+        handlers.launchShortcut(filteredShort[0].id)
+      } else {
+        messageApi.info(`找到 ${filteredShort.length} 个匹配项，请使用↑↓键选择后回车`)
+      }
+    }, [shortcutSearchKeyword, shortcuts]),
 
-      // 搜索连接
+    // 服务器搜索
+    serverSearch: useCallback((keyword: string) => {
+      setServerSearchKeyword(keyword.trim())
+      setServerSearchSelectedIndex(-1)
+    }, []),
+
+    serverSearchConnect: useCallback(() => {
+      if (!serverSearchKeyword.trim()) {
+        messageApi.info('请先输入搜索关键词')
+        return
+      }
+      const kw = serverSearchKeyword.toLowerCase()
       const filteredConn = connections.filter(c =>
         c.clientName.toLowerCase().includes(kw) ||
         c.ipAddress.toLowerCase().includes(kw)
       )
-
-      // 搜索快捷方式
-      const filteredShortcuts = shortcuts.filter(s =>
-        s.name.toLowerCase().includes(kw)
-      )
-
-      // 优先启动快捷方式（只有一个匹配时）
-      if (filteredShortcuts.length === 1 && filteredConn.length === 0) {
-        handlers.launchShortcut(filteredShortcuts[0].id)
-        return
-      }
-
-      // 直接连接（只有一个连接匹配时）
-      if (filteredConn.length === 1 && filteredShortcuts.length === 0) {
+      
+      if (filteredConn.length === 0) {
+        messageApi.info('未找到匹配的服务器')
+      } else if (filteredConn.length === 1) {
         handlers.connect(filteredConn[0].id)
-        return
-      }
-
-      const total = filteredConn.length + filteredShortcuts.length
-      if (total === 0) {
-        messageApi.info('未找到匹配的连接或软件')
       } else {
-        messageApi.info(`找到 ${total} 个匹配项，请选择后操作`)
+        messageApi.info(`找到 ${filteredConn.length} 个匹配项，请使用↑↓键选择后回车连接`)
       }
-    }, [searchKeyword, connections, shortcuts]),
+    }, [serverSearchKeyword, connections]),
 
     connect: useCallback(async (id: string) => {
       if (connectingId) {
@@ -360,7 +373,7 @@ export default function App() {
       }
     }, [importPassphrase, loadConnections]),
 
-    viewPassword: useCallback((id: string) => {
+    viewPassword: useCallback(async (id: string) => {
       if (revealedPasswords[id]) {
         setRevealedPasswords(prev => {
           const next = { ...prev }
@@ -369,43 +382,95 @@ export default function App() {
         })
         return
       }
-      setPendingPasswordId(id)
-      setOsPassword('')
-      setOsPasswordModalVisible(true)
-    }, [revealedPasswords]),
-
-    osPasswordConfirm: useCallback(async () => {
-      if (!osPassword && osPassword !== '') {
-        messageApi.warning('请输入 Windows 登录密码')
-        return
+      if (!window.rdm) return
+      const r = await window.rdm.connection.getPassword(id)
+      if (r.success && r.data !== undefined) {
+        setRevealedPasswords(prev => ({ ...prev, [id]: r.data! }))
+        setTimeout(() => {
+          setRevealedPasswords(prev => {
+            const next = { ...prev }
+            delete next[id]
+            return next
+          })
+        }, 30000)
+      } else {
+        messageApi.error(r.error || '获取密码失败')
       }
-      if (!window.rdm || !pendingPasswordId) return
-      setOsVerifying(true)
-      try {
-        const authResult = await window.rdm.auth.verifyWindowsPassword(osPassword)
-        if (!authResult.valid) {
-          messageApi.error(authResult.error || 'Windows 密码不正确')
-          return
-        }
-        const r = await window.rdm.connection.getPassword(pendingPasswordId)
-        if (r.success && r.data !== undefined) {
-          setRevealedPasswords(prev => ({ ...prev, [pendingPasswordId]: r.data! }))
-          setOsPasswordModalVisible(false)
-          setTimeout(() => {
-            setRevealedPasswords(prev => {
-              const next = { ...prev }
-              delete next[pendingPasswordId]
-              return next
-            })
-          }, 30000)
-        } else {
-          messageApi.error(r.error || '获取密码失败')
-        }
-      } finally {
-        setOsVerifying(false)
-      }
-    }, [osPassword, pendingPasswordId])
+    }, [revealedPasswords])
   }
+
+  // ---- 快捷启动搜索键盘导航 ----
+  const handleShortcutSearchNavigate = useCallback((direction: 'up' | 'down' | 'activate') => {
+    const kw = shortcutSearchKeyword.toLowerCase()
+    const filteredShort = shortcutSearchKeyword
+      ? shortcuts.filter(s => s.name.toLowerCase().includes(kw))
+      : shortcuts
+    const total = filteredShort.length
+    if (total === 0) return
+
+    if (direction === 'up') {
+      setShortcutSearchSelectedIndex(prev => {
+        if (prev <= 0) return total - 1
+        return prev - 1
+      })
+    } else if (direction === 'down') {
+      setShortcutSearchSelectedIndex(prev => {
+        if (prev >= total - 1) return 0
+        return prev + 1
+      })
+    } else if (direction === 'activate') {
+      setShortcutSearchSelectedIndex(prev => {
+        if (prev < 0) {
+          if (total === 1) {
+            handlers.launchShortcut(filteredShort[0].id)
+          }
+          return prev
+        }
+        if (prev < filteredShort.length) {
+          handlers.launchShortcut(filteredShort[prev].id)
+        }
+        return prev
+      })
+    }
+  }, [shortcutSearchKeyword, shortcuts, handlers])
+
+  // ---- 服务器搜索键盘导航 ----
+  const handleServerSearchNavigate = useCallback((direction: 'up' | 'down' | 'activate') => {
+    const kw = serverSearchKeyword.toLowerCase()
+    const filteredConn = serverSearchKeyword
+      ? connections.filter(c =>
+          c.clientName.toLowerCase().includes(kw) ||
+          c.ipAddress.toLowerCase().includes(kw)
+        )
+      : connections
+    const total = filteredConn.length
+    if (total === 0) return
+
+    if (direction === 'up') {
+      setServerSearchSelectedIndex(prev => {
+        if (prev <= 0) return total - 1
+        return prev - 1
+      })
+    } else if (direction === 'down') {
+      setServerSearchSelectedIndex(prev => {
+        if (prev >= total - 1) return 0
+        return prev + 1
+      })
+    } else if (direction === 'activate') {
+      setServerSearchSelectedIndex(prev => {
+        if (prev < 0) {
+          if (total === 1) {
+            handlers.connect(filteredConn[0].id)
+          }
+          return prev
+        }
+        if (prev < filteredConn.length) {
+          handlers.connect(filteredConn[prev].id)
+        }
+        return prev
+      })
+    }
+  }, [serverSearchKeyword, connections, handlers])
 
   // ---- 统一渲染 ----
   return (
@@ -429,25 +494,32 @@ export default function App() {
         )}
         <Layout
           onAdd={handlers.add}
-          onSearch={handlers.search}
-          onSearchConnect={handlers.searchConnect}
+          onServerSearch={handlers.serverSearch}
+          onServerSearchConnect={handlers.serverSearchConnect}
+          onServerSearchNavigate={handleServerSearchNavigate}
           onExport={handlers.export}
           onImport={handlers.import}
+          onSettings={() => setSettingsVisible(true)}
           theme={currentTheme}
           onThemeChange={setTheme}
         >
           <ShortcutGrid
             shortcuts={filteredShortcuts}
             launchingId={launchingShortcutId}
+            selectedIndex={shortcutSearchSelectedIndex}
             onAdd={handlers.addShortcut}
             onBatchDelete={handlers.batchDeleteShortcut}
             onLaunch={handlers.launchShortcut}
             onReorder={handlers.reorderShortcuts}
+            onSearch={handlers.shortcutSearch}
+            onSearchConnect={handlers.shortcutSearchConnect}
+            onSearchNavigate={handleShortcutSearchNavigate}
           />
           <ConnectionTable
             connections={filteredConnections}
             loading={loading}
             connectingId={connectingId}
+            selectedIndex={serverSearchSelectedIndex}
             revealedPasswords={revealedPasswords}
             onEdit={handlers.edit}
             onDelete={handlers.delete}
@@ -511,29 +583,13 @@ export default function App() {
           </div>
         )}
 
-        {/* Windows 密码验证弹窗 */}
-        {osPasswordModalVisible && (
-          <div className="modal-overlay" onClick={() => setOsPasswordModalVisible(false)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <h3>验证身份</h3>
-              <p>请输入当前 Windows 用户的登录密码以查看连接密码：</p>
-              <input
-                type="password"
-                placeholder="请输入 Windows 密码"
-                value={osPassword}
-                onChange={e => setOsPassword(e.target.value)}
-                className="modal-input"
-                autoFocus
-              />
-              <div className="modal-actions">
-                <button onClick={() => setOsPasswordModalVisible(false)}>取消</button>
-                <button onClick={handlers.osPasswordConfirm} disabled={osVerifying}>
-                  {osVerifying ? '验证中...' : '验证'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        
+
+        {/* 系统设置面板 */}
+        <SettingsPanel
+          visible={settingsVisible}
+          onClose={() => setSettingsVisible(false)}
+        />
       </AntdApp>
     </ConfigProvider>
   )

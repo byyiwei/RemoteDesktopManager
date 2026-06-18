@@ -8,6 +8,14 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 // ======================== 类型定义（供渲染进程 TypeScript 使用）========================
 
+export interface TraySettings {
+  enableTray: boolean
+  minimizeToTray: boolean
+  closeToTray: boolean
+  shortcutKey: string
+  shortcutEnabled: boolean
+}
+
 export interface RDM_API {
   crypto: {
     check: () => Promise<{ available: boolean; message: string }>
@@ -43,6 +51,8 @@ export interface RDM_API {
     getAutoStart: () => Promise<{ enabled: boolean }>
     setAutoStart: (enabled: boolean) => Promise<{ success: boolean; error?: string }>
     createDesktopShortcut: () => Promise<{ success: boolean; message?: string; error?: string }>
+    getTraySettings: () => Promise<{ success: boolean; data?: TraySettings; error?: string }>
+    setTraySettings: (settings: Partial<TraySettings>) => Promise<{ success: boolean; data?: TraySettings; error?: string }>
   }
   window: {
     minimize: () => Promise<void>
@@ -140,7 +150,9 @@ contextBridge.exposeInMainWorld('rdm', {
   settings: {
     getAutoStart: () => ipcRenderer.invoke('settings:getAutoStart'),
     setAutoStart: (enabled: boolean) => ipcRenderer.invoke('settings:setAutoStart', enabled),
-    createDesktopShortcut: () => ipcRenderer.invoke('settings:createDesktopShortcut')
+    createDesktopShortcut: () => ipcRenderer.invoke('settings:createDesktopShortcut'),
+    getTraySettings: () => ipcRenderer.invoke('settings:getTraySettings'),
+    setTraySettings: (settings: Partial<TraySettings>) => ipcRenderer.invoke('settings:setTraySettings', settings)
   },
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

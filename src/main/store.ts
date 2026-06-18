@@ -69,10 +69,32 @@ export interface Shortcut {
 const STORAGE_DIR = homedir() + '/AppData/Roaming/remote-desktop-manager'
 const STORAGE_FILE = STORAGE_DIR + '/connections.json'
 const SHORTCUTS_FILE = STORAGE_DIR + '/shortcuts.json'
+const SETTINGS_FILE = STORAGE_DIR + '/settings.json'
 
 let connectionsCache: Connection[] = []
 let shortcutsCache: Shortcut[] = []
+let settingsCache: TraySettings = defaultSettings()
 let isInitialized = false
+
+// ======================== 托盘配置类型 ========================
+
+export interface TraySettings {
+  enableTray: boolean           // 是否启用托盘图标
+  minimizeToTray: boolean       // 最小化时是否最小化到托盘
+  closeToTray: boolean          // 关闭时是否最小化到托盘
+  shortcutKey: string           // 快捷键（如 'Ctrl+Shift+R'）
+  shortcutEnabled: boolean      // 是否启用快捷键
+}
+
+function defaultSettings(): TraySettings {
+  return {
+    enableTray: true,
+    minimizeToTray: true,
+    closeToTray: false,
+    shortcutKey: 'Ctrl+Shift+R',
+    shortcutEnabled: true
+  }
+}
 
 // ======================== 辅助函数 ========================
 
@@ -125,6 +147,24 @@ export async function initStore(): Promise<void> {
     shortcutsCache = []
     await writeFile(SHORTCUTS_FILE, JSON.stringify([]), 'utf-8')
     console.log('📁 创建快捷方式存储文件:', SHORTCUTS_FILE)
+  }
+
+  // 加载设置
+  try {
+    const data = await readFile(SETTINGS_FILE, 'utf-8')
+    const parsed = JSON.parse(data)
+    settingsCache = { ...defaultSettings(), ...parsed }
+    console.log('📁 从文件加载设置:', settingsCache)
+  } catch (readError) {
+    settingsCache = defaultSettings()
+    console.log('⚠️ 设置文件不存在或读取失败，使用默认设置:', settingsCache)
+    try {
+      await writeFile(SETTINGS_FILE, JSON.stringify(settingsCache, null, 2), 'utf-8')
+      console.log('📁 创建设置存储文件:', SETTINGS_FILE)
+    } catch (writeError) {
+      console.warn('⚠️ 无法创建设置文件:', SETTINGS_FILE, '错误:', (writeError as Error).message)
+      console.warn('⚠️ 将使用内存中的默认设置，设置不会被持久化')
+    }
   }
   
   isInitialized = true
@@ -353,4 +393,29 @@ export async function reorderShortcuts(orderedIds: string[]): Promise<void> {
   shortcutsCache = reordered
   await saveShortcutsToFile()
   console.log(`🔀 快捷方式排序已更新`)
+}
+
+// ======================== 设置操作 ========================
+
+async function saveSettingsToFile(): Promise<void> {
+  try {
+    await writeFile(SETTINGS_FILE, JSON.stringify(settingsCache, null, 2), 'utf-8')
+  } catch (error) {
+    console.warn('⚠️ 无法保存设置文件:', (error as Error).message)
+  }
+}
+
+export function getSettings(): TraySettings {
+  checkInitialized()
+  return { ...settingsCache }
+}
+
+export async function updateSettings(settings: Partial<TraySettings>): Promise<TraySettings> {
+  checkInitialized()
+  
+  Object.assign(settingsCache, settings)
+  await saveSettingsToFile()
+  
+  console.log(`✅ 更新设置:`, settingsCache)
+  return { ...settingsCache }
 }

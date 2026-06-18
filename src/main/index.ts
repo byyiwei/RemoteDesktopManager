@@ -3,17 +3,23 @@
  * 负责创建窗口、初始化应用、注册 IPC 处理器
  */
 
-import { app, BrowserWindow, shell, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, shell, Menu, nativeImage, Tray, globalShortcut } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { registerIpcHandlers } from './ipcHandlers'
-import { initStore } from './store'
+import { initStore, getSettings } from './store'
 import { isEncryptionAvailable } from './crypto'
 
 const APP_NAME = 'Windows运维远程桌面管理工具'
-const APP_ID = 'com.rdm.manager'
+const APP_ID = 'com.rdm.desktop.manager'
+
+// 在 app.whenReady 之前设置 AppUserModelId（影响任务管理器显示）
+if (process.platform === 'win32') {
+  app.setAppUserModelId(APP_ID)
+}
 
 let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
 
 /**
  * 获取图标文件路径
@@ -95,10 +101,6 @@ function createWindow(): void {
     mainWindow.setIcon(validIcon)
   }
   
-  if (process.platform === 'win32') {
-    app.setAppUserModelId(APP_ID)
-  }
-
   // 渲染进程加载完成后确保窗口可见
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('[window] 渲染进程加载完成')
@@ -164,10 +166,118 @@ function createWindow(): void {
   console.log('[window] 窗口创建完成，位置:', { x, y }, '大小:', { width, height })
 }
 
+/**
+ * 显示/隐藏主窗口
+ */
+export function toggleWindow(): void {
+  if (mainWindow) {
+    if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
+      // 窗口可见且未最小化，隐藏它
+      mainWindow.hide()
+      console.log('[window] 窗口已隐藏')
+    } else {
+      // 窗口不可见或已最小化，显示并聚焦它
+      mainWindow.show()
+      mainWindow.restore() // 如果是最小化状态，先恢复
+      mainWindow.focus()
+      console.log('[window] 窗口已显示并聚焦')
+    }
+  }
+}
+
+/**
+ * 创建托盘图标
+ */
+function createTray(): void {
+  const iconPath = getIconPath()
+  if (!iconPath) {
+    console.warn('[tray] 未找到图标文件，跳过托盘创建')
+    return
+  }
+
+  const icon = nativeImage.createFromPath(iconPath)
+  if (icon.isEmpty()) {
+    console.warn('[tray] 图标加载失败，跳过托盘创建')
+    return
+  }
+
+  tray = new Tray(icon)
+  tray.setToolTip(APP_NAME)
+
+  // 创建托盘菜单
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '显示窗口',
+      click: () => {
+        mainWindow?.show()
+        mainWindow?.focus()
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setContextMenu(contextMenu)
+
+  // 点击托盘图标显示/隐藏窗口
+  tray.on('click', () => {
+    toggleWindow()
+  })
+
+  console.log('[tray] 托盘图标创建完成')
+}
+
+/**
+ * 注册全局快捷键
+ */
+function registerGlobalShortcut(shortcutKey: string): void {
+  // 先注销已注册的快捷键
+  globalShortcut.unregisterAll()
+
+  try {
+    const ret = globalShortcut.register(shortcutKey, () => {
+      toggleWindow()
+    })
+
+    if (ret) {
+      console.log(`[shortcut] 全局快捷键已注册: ${shortcutKey}`)
+    } else {
+      console.warn(`[shortcut] 快捷键注册失败: ${shortcutKey}，可能被其他程序占用`)
+    }
+  } catch (error) {
+    console.error(`[shortcut] 快捷键注册异常:`, error)
+  }
+}
+
+/**
+ * 重新注册快捷键
+ */
+export function reRegisterGlobalShortcut(shortcutKey: string): void {
+  registerGlobalShortcut(shortcutKey)
+}
+
 app.whenReady().then(async () => {
-  // 设置应用名称和用户模型ID（影响任务管理器显示）
+  // 设置应用名称（影响任务管理器显示）
   app.setName(APP_NAME)
-  app.setAppUserModelId('com.rdm.manager')
+  
+  // 设置进程名称（在任务管理器中显示）
+  if (process.platform === 'win32') {
+    process.title = APP_NAME
+    try {
+      // 尝试设置控制台标题（仅在有控制台窗口时有效）
+      if (typeof process.stdout !== 'undefined') {
+        process.stdout.write('\x1b]0;' + APP_NAME + '\x07')
+      }
+    } catch {
+      // 忽略错误
+    }
+  }
+  
   await initStore()
 
   if (!isEncryptionAvailable()) {
@@ -176,13 +286,54 @@ app.whenReady().then(async () => {
     console.log('✅ safeStorage 加密模块可用')
   }
 
+  // 获取设置并初始化托盘和快捷键
+  const settings = getSettings()
+  
+  // 创建托盘（如果启用）
+  if (settings.enableTray) {
+    createTray()
+  }
+
+  // 注册快捷键（如果启用）
+  if (settings.shortcutEnabled && settings.shortcutKey) {
+    registerGlobalShortcut(settings.shortcutKey)
+  }
+
   Menu.setApplicationMenu(null)
   registerIpcHandlers()
   createWindow()
 
+  // 设置窗口最小化和关闭行为
+  if (mainWindow) {
+    // 最小化到托盘
+    mainWindow.on('minimize', (event) => {
+      const currentSettings = getSettings()
+      if (currentSettings.minimizeToTray && currentSettings.enableTray) {
+        event.preventDefault()
+        mainWindow?.hide()
+        console.log('[window] 最小化到托盘')
+      }
+    })
+
+    // 关闭到托盘
+    mainWindow.on('close', (event) => {
+      const currentSettings = getSettings()
+      if (currentSettings.closeToTray && currentSettings.enableTray && !app.isQuiting) {
+        event.preventDefault()
+        mainWindow?.hide()
+        console.log('[window] 关闭到托盘')
+      }
+    })
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('before-quit', () => {
+  app.isQuiting = true
+  globalShortcut.unregisterAll()
 })
 
 app.on('window-all-closed', () => {

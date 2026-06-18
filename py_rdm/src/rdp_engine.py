@@ -31,6 +31,7 @@ def generate_rdp_file(ip: str, port: int, username: str) -> str:
     lines = [
         f"full address:s:{ip}:{port}",
         f"username:s:{username}",
+        "domain:s:.",
         "prompt for credentials:i:0",
         "promptcredentialonce:i:0",
         "enablecredsspsupport:i:1",
@@ -81,21 +82,55 @@ def start_rdp_connection(ip: str, port: int, username: str, password: str) -> su
     if not password:
         raise ValueError("密码不能为空")
 
-    target = f"TERMSRV/{ip}" if port == 3389 else f"TERMSRV/{ip}:{port}"
+    # 构建所有可能的目标名格式（兼容不同服务器的 mstsc 查找方式）
+    targets = [f"TERMSRV/{ip}", f"TERMSRV/{ip}:{port}"]
+    targets = list(set(targets))  # 去重
 
-    # 1. 注入凭据
-    subprocess.run(
-        ["cmdkey", f"/add:{target}", f"/user:{username}", f"/pass:{password}"],
-        check=True,
-        capture_output=True,
-    )
+    import time
 
-    # 2. 生成临时.rdp文件
+    # 1. 清除所有目标的旧凭据
+    for t in targets:
+        try:
+            subprocess.run(["cmdkey", f"/delete:{t}"], capture_output=True, timeout=5)
+        except Exception:
+            pass
+    time.sleep(0.2)
+
+    # cmdkey 必须使用纯用户名，不能带 .\ 前缀（否则 cmdkey 命令会执行失败）
+
+    # 2. 为所有目标注入新凭据
+    for t in targets:
+        try:
+            subprocess.run(
+                ["cmdkey", f"/add:{t}", f"/user:{username}", f"/pass:{password}"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except Exception as e:
+            print(f"[RDP] 写入凭据失败: {t}, {e}")
+
+    # 3. 验证凭据已注入
+    try:
+        verify_result = subprocess.run(
+            ["cmdkey", "/list"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        found = any(t.lower() in verify_result.stdout.lower() for t in targets)
+        if not found:
+            print(f"[RDP] 警告：所有目标的凭据均未在列表中找到")
+    except Exception:
+        pass
+
+    # 3. 生成临时.rdp文件
     rdp_content = generate_rdp_file(ip, port, username)
     rdp_path = Path(tempfile.gettempdir()) / f"rdm_{uuid.uuid4().hex}.rdp"
     rdp_path.write_text(rdp_content, encoding="utf-8")
 
-    # 3. 启动mstsc
+    # 4. 启动mstsc
     proc = subprocess.Popen(
         ["mstsc", str(rdp_path)],
         stdout=subprocess.DEVNULL,
@@ -103,7 +138,7 @@ def start_rdp_connection(ip: str, port: int, username: str, password: str) -> su
     )
 
     # 存储清理信息到进程对象
-    proc._rdm_target = target
+    proc._rdm_targets = targets
     proc._rdm_rdp_path = rdp_path
 
     return proc
@@ -111,14 +146,11 @@ def start_rdp_connection(ip: str, port: int, username: str, password: str) -> su
 
 def cleanup_rdp(proc: subprocess.Popen):
     """清理RDP连接产生的凭据和临时文件"""
-    # 清除凭据
-    target = getattr(proc, "_rdm_target", None)
-    if target:
+    # 清除所有目标的凭据
+    targets = getattr(proc, "_rdm_targets", [])
+    for target in targets:
         try:
-            subprocess.run(
-                ["cmdkey", f"/delete:{target}"],
-                capture_output=True,
-            )
+            subprocess.run(["cmdkey", f"/delete:{target}"], capture_output=True)
         except Exception:
             pass
 

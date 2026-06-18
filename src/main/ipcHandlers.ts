@@ -18,7 +18,9 @@ import {
   addShortcut,
   deleteShortcut,
   batchDeleteShortcuts,
-  reorderShortcuts
+  reorderShortcuts,
+  getSettings,
+  updateSettings
 } from './store'
 import { encryptPassword, decryptPassword, portableEncrypt, portableDecrypt, isEncryptionAvailable, verifyWindowsPassword } from './crypto'
 import { startRdpConnection, validateIp, validatePort } from './rdp'
@@ -281,7 +283,39 @@ export function registerIpcHandlers(): void {
 
   // ======================== 设置：创建桌面快捷方式 ========================
   
-  ipcMain.handle('settings:createDesktopShortcut', async () => {
+  // ======================== 设置：托盘配置 ========================
+
+ipcMain.handle('settings:getTraySettings', () => {
+  try {
+    const settings = getSettings()
+    return { success: true, data: settings }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('settings:setTraySettings', async (_event, settings: any) => {
+  try {
+    const result = await updateSettings(settings)
+    
+    // 如果快捷键被修改或启用状态变化，重新注册
+    if (settings.shortcutKey !== undefined || settings.shortcutEnabled !== undefined) {
+      const { reRegisterGlobalShortcut } = require('./index')
+      if (result.shortcutEnabled && result.shortcutKey) {
+        reRegisterGlobalShortcut(result.shortcutKey)
+      } else {
+        const { globalShortcut } = require('electron')
+        globalShortcut.unregisterAll()
+      }
+    }
+    
+    return { success: true, data: result }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('settings:createDesktopShortcut', async () => {
     try {
       const { exec } = require('child_process')
       const { promisify } = require('util')
@@ -295,6 +329,11 @@ export function registerIpcHandlers(): void {
   
       const targetPath = process.execPath
       const workingDir = app.isPackaged ? dirname(process.execPath) : app.getAppPath()
+
+      // 图标源：打包后使用 exe 自身嵌入的图标，开发模式使用 resources/icon.ico
+      const iconPath = app.isPackaged
+        ? `${targetPath},0`
+        : join(app.getAppPath(), 'resources', 'icon.ico')
   
       // 将 PowerShell 脚本写入临时文件，避免命令行引号嵌套问题
       const psFilePath = join(tmpdir(), `rdm_shortcut_${randomUUID()}.ps1`)
@@ -304,7 +343,7 @@ export function registerIpcHandlers(): void {
         `$Shortcut.TargetPath = '${targetPath}'`,
         `$Shortcut.WorkingDirectory = '${workingDir}'`,
         // 使用 exe 本身作为图标源（exe 已嵌入正确图标，,0 表示第一个图标资源）
-        `$Shortcut.IconLocation = '${targetPath},0'`,
+        `$Shortcut.IconLocation = '${iconPath}'`,
         "$Shortcut.Description = 'Windows运维远程桌面管理工具 v1.0.0'",
         '$Shortcut.Save()'
       ].join('\r\n')

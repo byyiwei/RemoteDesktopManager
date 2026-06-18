@@ -65,3 +65,12 @@ export interface Shortcut {
   iconData?: string
   createdAt: string
 }
+
+/** 托盘设置 */
+export interface TraySettings {
+  enableTray: boolean
+  minimizeToTray: boolean
+  closeToTray: boolean
+  shortcutKey: string
+  shortcutEnabled: boolean
+}
