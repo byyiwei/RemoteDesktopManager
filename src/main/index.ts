@@ -83,7 +83,7 @@ function createWindow(): void {
     y,
     minWidth: 400,
     minHeight: 300,
-    show: true,
+    show: false,
     title: APP_NAME,
     frame: false,  // 无边框窗口，使用自定义 TitleBar
     icon: validIcon,
@@ -100,7 +100,16 @@ function createWindow(): void {
   if (validIcon) {
     mainWindow.setIcon(validIcon)
   }
-  
+
+  // 窗口准备好显示时立即显示（比 did-finish-load 更早）
+  mainWindow.once('ready-to-show', () => {
+    if (mainWindow) {
+      mainWindow.show()
+      mainWindow.focus()
+      console.log('[window] 窗口已显示(ready-to-show)')
+    }
+  })
+
   // 渲染进程加载完成后确保窗口可见
   mainWindow.webContents.on('did-finish-load', () => {
     console.log('[window] 渲染进程加载完成')
@@ -286,9 +295,13 @@ app.whenReady().then(async () => {
     console.log('✅ safeStorage 加密模块可用')
   }
 
-  // 获取设置并初始化托盘和快捷键
+  Menu.setApplicationMenu(null)
+  registerIpcHandlers()
+  createWindow()
+
+  // 获取设置并初始化托盘和快捷键（在窗口加载时并行处理）
   const settings = getSettings()
-  
+
   // 创建托盘（如果启用）
   if (settings.enableTray) {
     createTray()
@@ -298,10 +311,6 @@ app.whenReady().then(async () => {
   if (settings.shortcutEnabled && settings.shortcutKey) {
     registerGlobalShortcut(settings.shortcutKey)
   }
-
-  Menu.setApplicationMenu(null)
-  registerIpcHandlers()
-  createWindow()
 
   // 设置窗口最小化和关闭行为
   if (mainWindow) {

@@ -111,11 +111,7 @@ Add-Type -AssemblyName System.Security
 $plainText = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${passBase64}'))
 $bytes = [System.Text.Encoding]::Unicode.GetBytes($plainText)
 $encrypted = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-$header1 = [byte[]](0x01,0x00,0x00,0x00)
-$guidBytes = [Guid]::new('D08C9DDF-0115-D111-8C7A-00C04FC297EB').ToByteArray()
-$header3 = [byte[]](0x00,0x00,0x00,0x00)
-$all = $header1 + $guidBytes + $header3 + $encrypted
--join ($all | ForEach-Object { $_.ToString('X2') })
+-join ($encrypted | ForEach-Object { $_.ToString('X2') })
 `
 
   return new Promise((resolve, reject) => {

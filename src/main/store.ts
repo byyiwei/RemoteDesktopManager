@@ -125,48 +125,37 @@ function toDisplay(conn: Connection): ConnectionDisplay {
 
 export async function initStore(): Promise<void> {
   await ensureStoreDir()
-  
-  try {
-    const data = await readFile(STORAGE_FILE, 'utf-8')
-    const parsed = JSON.parse(data)
-    connectionsCache = Array.isArray(parsed) ? parsed : []
+
+  const [connData, shortcutData, settingsData] = await Promise.all([
+    readFile(STORAGE_FILE, 'utf-8').catch(() => null),
+    readFile(SHORTCUTS_FILE, 'utf-8').catch(() => null),
+    readFile(SETTINGS_FILE, 'utf-8').catch(() => null)
+  ])
+
+  if (connData) {
+    try { connectionsCache = Array.isArray(JSON.parse(connData)) ? JSON.parse(connData) : [] } catch { connectionsCache = [] }
     console.log('📁 从文件加载连接数据:', connectionsCache.length, '条')
-  } catch {
+  } else {
     connectionsCache = []
-    await writeFile(STORAGE_FILE, JSON.stringify([]), 'utf-8')
-    console.log('📁 创建新的存储文件:', STORAGE_FILE)
+    await writeFile(STORAGE_FILE, JSON.stringify([]), 'utf-8').catch(() => {})
   }
 
-  // 加载快捷方式
-  try {
-    const data = await readFile(SHORTCUTS_FILE, 'utf-8')
-    const parsed = JSON.parse(data)
-    shortcutsCache = Array.isArray(parsed) ? parsed : []
+  if (shortcutData) {
+    try { shortcutsCache = Array.isArray(JSON.parse(shortcutData)) ? JSON.parse(shortcutData) : [] } catch { shortcutsCache = [] }
     console.log('📁 从文件加载快捷方式:', shortcutsCache.length, '条')
-  } catch {
+  } else {
     shortcutsCache = []
-    await writeFile(SHORTCUTS_FILE, JSON.stringify([]), 'utf-8')
-    console.log('📁 创建快捷方式存储文件:', SHORTCUTS_FILE)
+    await writeFile(SHORTCUTS_FILE, JSON.stringify([]), 'utf-8').catch(() => {})
   }
 
-  // 加载设置
-  try {
-    const data = await readFile(SETTINGS_FILE, 'utf-8')
-    const parsed = JSON.parse(data)
-    settingsCache = { ...defaultSettings(), ...parsed }
+  if (settingsData) {
+    try { settingsCache = { ...defaultSettings(), ...JSON.parse(settingsData) } } catch { settingsCache = defaultSettings() }
     console.log('📁 从文件加载设置:', settingsCache)
-  } catch (readError) {
+  } else {
     settingsCache = defaultSettings()
-    console.log('⚠️ 设置文件不存在或读取失败，使用默认设置:', settingsCache)
-    try {
-      await writeFile(SETTINGS_FILE, JSON.stringify(settingsCache, null, 2), 'utf-8')
-      console.log('📁 创建设置存储文件:', SETTINGS_FILE)
-    } catch (writeError) {
-      console.warn('⚠️ 无法创建设置文件:', SETTINGS_FILE, '错误:', (writeError as Error).message)
-      console.warn('⚠️ 将使用内存中的默认设置，设置不会被持久化')
-    }
+    await writeFile(SETTINGS_FILE, JSON.stringify(settingsCache, null, 2), 'utf-8').catch(() => {})
   }
-  
+
   isInitialized = true
   console.log('📁 数据存储已初始化')
 }

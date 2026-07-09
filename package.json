@@ -1,7 +1,7 @@
 {
   "name": "remote-desktop-manager",
-  "version": "1.0.0",
-  "description": "Windows运维远程桌面管理工具 v1.0.0 - 高效管理远程桌面连接",
+  "version": "1.1.0",
+  "description": "Windows运维远程桌面管理工具 - 高效管理远程桌面连接",
   "main": "./out/main/index.js",
   "author": "RDM Team",
   "scripts": {
@@ -26,25 +26,5 @@
     "electron-vite": "^2.0.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.10"
-  },
-  "build": {
-    "appId": "com.rdm.desktop.manager",
-    "productName": "Windows运维远程桌面管理工具",
-    "forceCodeSigning": false,
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "out/**/*",
-      "resources/**/*"
-    ],
-    "win": {
-      "target": "portable",
-      "icon": "resources/icon.ico",
-      "signAndEditExecutable": false
-    },
-    "portable": {
-      "artifactName": "远程桌面管理工具.exe"
-    }
   }
 }

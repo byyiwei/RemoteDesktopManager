@@ -12,25 +12,12 @@ files:
   - "out/main/**/*"
   - "out/preload/**/*"
   - "out/renderer/**/*"
-  - "resources/icon.ico"
-
-extraResources:
-  - from: "resources/"
-    to: "resources/"
+  - "resources/**/*"
 
 win:
-  target: nsis
+  target: portable
   icon: resources/icon.ico
-  signAndEditExecutable: false
-  artifactName: ${productName}-${version}.${ext}
+  signAndEditExecutable: true
 
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  language: 2052
-  installerIcon: resources/icon.ico
-  uninstallerIcon: resources/icon.ico
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
-  shortcutName: Windows运维远程桌面管理工具
-  perMachine: false
+portable:
+  artifactName: ${productName}-${version}.${ext}
