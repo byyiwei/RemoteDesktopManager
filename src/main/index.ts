@@ -52,8 +52,8 @@ function getSafeWindowBounds() {
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
   
-  const windowWidth = Math.min(500, screenWidth - 100)
-  const windowHeight = Math.min(650, screenHeight - 50)
+  const windowWidth = Math.min(520, screenWidth - 100)
+  const windowHeight = Math.min(720, screenHeight - 50)
   const x = Math.max(0, Math.floor((screenWidth - windowWidth) / 2))
   const y = Math.max(0, Math.floor((screenHeight - windowHeight) / 2))
   

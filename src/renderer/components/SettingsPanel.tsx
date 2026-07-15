@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Form, Switch, Input, Button, message } from 'antd'
+import { Form, Switch, Button, message } from 'antd'
 import { SettingOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons'
 import type { TraySettings } from '../types'
 
@@ -21,6 +21,7 @@ const shortcutOptions = [
   { value: 'Ctrl+R', label: 'Ctrl + R' },
   { value: 'F12', label: 'F12' },
 ]
+const CUSTOM_OPTION_VALUE = '__custom__'
 
 export default function SettingsPanel({ visible, onClose }: SettingsPanelProps) {
   const [settings, setSettings] = useState<TraySettings>({
@@ -32,6 +33,7 @@ export default function SettingsPanel({ visible, onClose }: SettingsPanelProps) 
   })
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [capturing, setCapturing] = useState(false)
   const [messageApi, contextHolder] = message.useMessage()
 
   useEffect(() => {
@@ -54,6 +56,32 @@ export default function SettingsPanel({ visible, onClose }: SettingsPanelProps) 
     
     loadSettings()
   }, [visible])
+
+  // 自定义快捷键：监听键盘组合
+  useEffect(() => {
+    if (!capturing) return
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const parts: string[] = []
+      if (e.ctrlKey) parts.push('Ctrl')
+      if (e.altKey) parts.push('Alt')
+      if (e.shiftKey) parts.push('Shift')
+      if (e.metaKey) parts.push('Super')
+      const key = e.key
+      // 仅按修饰键时继续等待主键；Esc 取消捕获
+      if (['Control', 'Alt', 'Shift', 'Meta'].includes(key)) return
+      if (key === 'Escape') {
+        setCapturing(false)
+        return
+      }
+      const combo = [...parts, key.length === 1 ? key.toUpperCase() : key].join('+')
+      setSettings(prev => ({ ...prev, shortcutKey: combo }))
+      setCapturing(false)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [capturing])
 
   const handleSave = async () => {
     if (!window.rdm) {
@@ -163,8 +191,17 @@ export default function SettingsPanel({ visible, onClose }: SettingsPanelProps) 
               >
                 <select
                   className="shortcut-select"
-                  value={settings.shortcutKey}
-                  onChange={(e) => setSettings(prev => ({ ...prev, shortcutKey: e.target.value }))}
+                  value={shortcutOptions.some(o => o.value === settings.shortcutKey) ? settings.shortcutKey : CUSTOM_OPTION_VALUE}
+                  onChange={(e) => {
+                    if (e.target.value === CUSTOM_OPTION_VALUE) {
+                      const current = settings.shortcutKey === CUSTOM_OPTION_VALUE ? '' : settings.shortcutKey
+                      setSettings(prev => ({ ...prev, shortcutKey: current }))
+                      setTimeout(() => setCapturing(true), 60)
+                    } else {
+                      setSettings(prev => ({ ...prev, shortcutKey: e.target.value }))
+                      setCapturing(false)
+                    }
+                  }}
                   disabled={!settings.shortcutEnabled}
                 >
                   {shortcutOptions.map(option => (
@@ -172,7 +209,22 @@ export default function SettingsPanel({ visible, onClose }: SettingsPanelProps) 
                       {option.label}
                     </option>
                   ))}
+                  <option value={CUSTOM_OPTION_VALUE}>自定义...</option>
                 </select>
+                {!shortcutOptions.some(o => o.value === settings.shortcutKey) && (
+                  <div
+                    className={`hotkey-capture ${capturing ? 'capturing' : ''}`}
+                    tabIndex={0}
+                    onClick={() => setCapturing(true)}
+                  >
+                    {capturing
+                      ? '请按下快捷键组合…'
+                      : (settings.shortcutKey || '点击此处按下快捷键')}
+                    <span className="hotkey-capture-hint">
+                      {capturing ? '（按 Esc 取消）' : '点击后按键盘组合'}
+                    </span>
+                  </div>
+                )}
               </Form.Item>
             </div>
 
