@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { ConfigProvider, App as AntdApp, message, theme as antdTheme } from 'antd'
+import { ConfigProvider, App as AntdApp, message, Modal, theme as antdTheme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import Layout from './components/Layout'
 import ConnectionTable from './components/ConnectionTable'
@@ -139,16 +139,28 @@ export default function App() {
       setFormVisible(true)
     }, []),
 
-    delete: useCallback(async (id: string) => {
+    delete: useCallback((id: string) => {
       if (!window.rdm) return
-      const r = await window.rdm.connection.delete(id)
-      if (r.success) {
-        messageApi.success('已删除')
-        loadConnections()
-      } else {
-        messageApi.error(r.error || '删除失败')
-      }
-    }, [loadConnections]),
+      const conn = connections.find(c => c.id === id)
+      Modal.confirm({
+        title: '确认删除',
+        content: conn
+          ? `确定要删除服务器「${conn.clientName}」（${conn.ipAddress}:${conn.port}）吗？删除后不可恢复。`
+          : '确定要删除该服务器吗？删除后不可恢复。',
+        okText: '删除',
+        okType: 'danger',
+        cancelText: '取消',
+        onOk: async () => {
+          const r = await window.rdm.connection.delete(id)
+          if (r.success) {
+            messageApi.success('已删除')
+            loadConnections()
+          } else {
+            messageApi.error(r.error || '删除失败')
+          }
+        }
+      })
+    }, [loadConnections, connections]),
 
     save: useCallback(async (v: CreateConnectionInput & { id?: string }) => {
       if (!window.rdm) {

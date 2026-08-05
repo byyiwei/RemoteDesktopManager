@@ -259,9 +259,35 @@ export function registerIpcHandlers(): void {
 
   // ======================== 设置：开机自启动 ========================
 
+  /**
+   * 计算自启动/快捷方式使用的可执行文件路径、参数和工作目录
+   * - dev 模式：process.execPath 是 electron.exe，必须把应用路径作为参数传入
+   * - portable 包：process.execPath 是 %TEMP% 下随机解压目录里的 exe，
+   *   必须用 PORTABLE_EXECUTABLE_FILE 指向原始便携 exe，否则重启后临时目录被清理导致无法自启动
+   */
+  function getLoginItemPath() {
+    if (!app.isPackaged) {
+      return {
+        path: process.execPath,
+        args: [app.getAppPath()],
+        dir: app.getAppPath()
+      }
+    }
+    const portablePath = process.env.PORTABLE_EXECUTABLE_FILE
+    if (portablePath) {
+      return {
+        path: portablePath,
+        args: [],
+        dir: process.env.PORTABLE_EXECUTABLE_DIR || dirname(portablePath)
+      }
+    }
+    return { path: process.execPath, args: [], dir: dirname(process.execPath) }
+  }
+
   ipcMain.handle('settings:getAutoStart', () => {
     try {
-      const settings = app.getLoginItemSettings()
+      const { path, args } = getLoginItemPath()
+      const settings = app.getLoginItemSettings({ path, args })
       return { enabled: settings.openAtLogin }
     } catch (error) {
       return { enabled: false }
@@ -270,10 +296,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('settings:setAutoStart', (_event, enabled: boolean) => {
     try {
+      const { path, args } = getLoginItemPath()
       app.setLoginItemSettings({
         openAtLogin: enabled,
-        path: process.execPath,
-        args: []
+        path,
+        args
       })
       return { success: true }
     } catch (error) {
@@ -326,21 +353,21 @@ ipcMain.handle('settings:createDesktopShortcut', async () => {
       const execAsync = promisify(exec)
   
       const desktopPath = join(app.getPath('desktop'), 'Windows运维远程桌面管理工具.lnk')
-  
-      const targetPath = process.execPath
-      const workingDir = app.isPackaged ? dirname(process.execPath) : app.getAppPath()
+
+      const { path: targetPath, args: targetArgs, dir: workingDir } = getLoginItemPath()
 
       // 图标源：打包后使用 exe 自身嵌入的图标，开发模式使用 resources/icon.ico
       const iconPath = app.isPackaged
         ? `${targetPath},0`
         : join(app.getAppPath(), 'resources', 'icon.ico')
-  
+
       // 将 PowerShell 脚本写入临时文件，避免命令行引号嵌套问题
       const psFilePath = join(tmpdir(), `rdm_shortcut_${randomUUID()}.ps1`)
       const psScript = [
         '$WshShell = New-Object -ComObject WScript.Shell',
         `$Shortcut = $WshShell.CreateShortcut('${desktopPath}')`,
         `$Shortcut.TargetPath = '${targetPath}'`,
+        targetArgs.length > 0 ? `$Shortcut.Arguments = '${targetArgs.join(' ')}'` : '',
         `$Shortcut.WorkingDirectory = '${workingDir}'`,
         // 使用 exe 本身作为图标源（exe 已嵌入正确图标，,0 表示第一个图标资源）
         `$Shortcut.IconLocation = '${iconPath}'`,
