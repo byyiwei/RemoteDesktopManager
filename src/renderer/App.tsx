@@ -20,9 +20,9 @@ import type {
 
 // 示例数据
 const sampleConnections: ConnectionDisplay[] = [
-  { id: '1', clientName: '生产服务器-A', ipAddress: '10.0.0.10', port: 3389, username: 'admin', hasPassword: true, bastionHosts: [], createdAt: '2026-01-15T08:00:00Z', updatedAt: '2026-06-10T10:00:00Z' },
-  { id: '2', clientName: '测试服务器-B', ipAddress: '10.0.0.20', port: 3389, username: 'testuser', hasPassword: true, bastionHosts: ['ops'], createdAt: '2026-02-20T09:00:00Z', updatedAt: '2026-06-09T14:00:00Z' },
-  { id: '3', clientName: '开发服务器-C', ipAddress: '192.168.1.100', port: 3389, username: 'dev', hasPassword: false, bastionHosts: [], createdAt: '2026-03-10T11:00:00Z', updatedAt: '2026-06-08T09:00:00Z' },
+  { id: '1', clientName: '生产服务器-A', serverType: 'windows', ipAddress: '10.0.0.10', port: 3389, username: 'admin', hasPassword: true, bastionHosts: [], createdAt: '2026-01-15T08:00:00Z', updatedAt: '2026-06-10T10:00:00Z' },
+  { id: '2', clientName: '测试服务器-B', serverType: 'windows', ipAddress: '10.0.0.20', port: 3389, username: 'testuser', hasPassword: true, bastionHosts: ['ops'], createdAt: '2026-02-20T09:00:00Z', updatedAt: '2026-06-09T14:00:00Z' },
+  { id: '3', clientName: '开发服务器-C', serverType: 'linux', ipAddress: '192.168.1.100', port: 22, username: 'root', hasPassword: false, bastionHosts: [], createdAt: '2026-03-10T11:00:00Z', updatedAt: '2026-06-08T09:00:00Z' },
 ]
 
 export default function App() {
@@ -254,7 +254,7 @@ export default function App() {
       try {
         const r = await window.rdm.connection.connect(id)
         if (r.success) {
-          messageApi.success(`会话结束 (${((Date.now() - start) / 1000).toFixed(0)}s)`)
+          messageApi.success(r.message || `会话结束 (${((Date.now() - start) / 1000).toFixed(0)}s)`)
         } else {
           messageApi.error(r.error || '连接失败')
         }

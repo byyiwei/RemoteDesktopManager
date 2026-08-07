@@ -10,9 +10,13 @@ import { homedir } from 'os'
 
 // ======================== 类型定义 ========================
 
+/** 服务器系统类型：windows 走 RDP/mstsc，linux 走 SSH/Xshell */
+export type ServerType = 'windows' | 'linux'
+
 export interface Connection {
   id: string
   clientName: string
+  serverType: ServerType
   ipAddress: string
   port: number
   username: string
@@ -24,6 +28,7 @@ export interface Connection {
 
 export interface CreateConnectionInput {
   clientName: string
+  serverType?: ServerType
   ipAddress: string
   port: number
   username: string
@@ -34,6 +39,7 @@ export interface CreateConnectionInput {
 export interface UpdateConnectionInput {
   id: string
   clientName?: string
+  serverType?: ServerType
   ipAddress?: string
   port?: number
   username?: string
@@ -44,6 +50,7 @@ export interface UpdateConnectionInput {
 export interface ConnectionDisplay {
   id: string
   clientName: string
+  serverType: ServerType
   ipAddress: string
   port: number
   username: string
@@ -78,12 +85,18 @@ let isInitialized = false
 
 // ======================== 托盘配置类型 ========================
 
+export type SshClientType = 'xshell' | 'openssh' | 'custom'
+
 export interface TraySettings {
   enableTray: boolean           // 是否启用托盘图标
   minimizeToTray: boolean       // 最小化时是否最小化到托盘
   closeToTray: boolean          // 关闭时是否最小化到托盘
   shortcutKey: string           // 快捷键（如 'Ctrl+Shift+R'）
   shortcutEnabled: boolean      // 是否启用快捷键
+  xshellPath: string            // Xshell 可执行文件路径（用于 Linux SSH 连接）
+  sshClientType: SshClientType  // Linux SSH 连接工具：xshell / openssh / custom
+  sshCustomPath: string         // 自定义终端工具可执行文件路径
+  sshCustomArgs: string         // 自定义终端工具启动参数模板（支持 {host} {port} {username} {password}）
 }
 
 function defaultSettings(): TraySettings {
@@ -92,7 +105,11 @@ function defaultSettings(): TraySettings {
     minimizeToTray: true,
     closeToTray: false,
     shortcutKey: 'Ctrl+Shift+R',
-    shortcutEnabled: true
+    shortcutEnabled: true,
+    xshellPath: '',
+    sshClientType: 'xshell',
+    sshCustomPath: '',
+    sshCustomArgs: ''
   }
 }
 
@@ -111,6 +128,7 @@ function toDisplay(conn: Connection): ConnectionDisplay {
   return {
     id: conn.id,
     clientName: conn.clientName,
+    serverType: conn.serverType || 'windows',
     ipAddress: conn.ipAddress,
     port: conn.port,
     username: conn.username,
@@ -199,6 +217,7 @@ export async function saveConnection(
   const newConnection: Connection = {
     id: randomUUID(),
     clientName: input.clientName.trim(),
+    serverType: input.serverType === 'linux' ? 'linux' : 'windows',
     ipAddress: input.ipAddress.trim(),
     port: input.port,
     username: input.username.trim(),
@@ -232,6 +251,7 @@ export async function updateConnection(
   const updated: Connection = {
     ...existing,
     clientName: input.clientName !== undefined ? input.clientName.trim() : existing.clientName,
+    serverType: input.serverType !== undefined ? (input.serverType === 'linux' ? 'linux' : 'windows') : existing.serverType,
     ipAddress: input.ipAddress !== undefined ? input.ipAddress.trim() : existing.ipAddress,
     port: input.port !== undefined ? input.port : existing.port,
     username: input.username !== undefined ? input.username.trim() : existing.username,
@@ -272,6 +292,7 @@ export async function deleteConnection(id: string): Promise<boolean> {
 export async function batchImportConnections(
   items: Array<{
     clientName: string
+    serverType?: ServerType
     ipAddress: string
     port: number
     username: string
@@ -299,6 +320,7 @@ export async function batchImportConnections(
     const conn: Connection = {
       id: randomUUID(),
       clientName: (item.clientName || '').trim(),
+      serverType: item.serverType === 'linux' ? 'linux' : 'windows',
       ipAddress: (item.ipAddress || '').trim(),
       port: item.port || 3389,
       username: (item.username || '').trim(),

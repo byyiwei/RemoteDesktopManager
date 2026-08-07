@@ -407,6 +407,28 @@ body {
   min-width: 0;
 }
 
+.connection-card-type {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.connection-card-type.type-windows {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.connection-card-type.type-linux {
+  color: #0d9488;
+  background: rgba(13, 148, 136, 0.1);
+  border: 1px solid rgba(13, 148, 136, 0.25);
+}
+
 .connection-card-meta {
   display: flex;
   align-items: center;
@@ -845,7 +867,10 @@ body {
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.2s ease;
+  overflow-y: auto;
 }
+
+.modal-content { margin: auto; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -1234,10 +1259,9 @@ body {
 /* ======================== 设置面板样式 ======================== */
 .settings-modal {
   min-width: 380px;
-  max-width: 420px;
+  max-width: 500px;
   padding: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  overflow: hidden;
 }
 
 .settings-modal .modal-header {
@@ -1303,21 +1327,47 @@ body {
   background: var(--color-primary);
 }
 
-.settings-modal .ant-form-item {
+.settings-modal .setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
-.settings-modal .ant-form-item:last-child {
+.settings-modal .setting-row:last-child {
   margin-bottom: 0;
 }
 
-.settings-modal .ant-form-item-label {
-  padding-bottom: 4px;
+.settings-modal .setting-row-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.settings-modal .ant-form-item-label > label {
-  font-size: 12.5px;
-  font-weight: 500;
+.settings-modal .setting-row-control {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.settings-modal .setting-row .shortcut-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-modal .ssh-info {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--color-text-secondary);
 }
 
@@ -1349,6 +1399,28 @@ body {
 .settings-modal .shortcut-select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.settings-modal .settings-section-desc {
+  margin: -2px 0 10px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.settings-modal .xshell-path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-modal .xshell-path-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--color-bg-hover);
+}
+
+.settings-modal .xshell-path-input:read-only {
+  color: var(--color-text-secondary);
 }
 
 .settings-modal .hotkey-capture {

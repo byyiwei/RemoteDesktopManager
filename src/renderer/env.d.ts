@@ -9,7 +9,8 @@ import type {
   ConnectionDisplay,
   CreateConnectionInput,
   UpdateConnectionInput,
-  Shortcut
+  Shortcut,
+  TraySettings
 } from './types'
 
 declare global {
@@ -72,6 +73,12 @@ declare global {
         getAutoStart: () => Promise<{ enabled: boolean }>
         setAutoStart: (enabled: boolean) => Promise<{ success: boolean; error?: string }>
         createDesktopShortcut: () => Promise<{ success: boolean; message?: string; error?: string }>
+        getTraySettings: () => Promise<{ success: boolean; data?: TraySettings; error?: string }>
+        setTraySettings: (settings: Partial<TraySettings>) => Promise<{ success: boolean; data?: TraySettings; error?: string; shortcutRegistered?: boolean; shortcutError?: string }>
+        detectXshell: () => Promise<{ success: boolean; data?: { path: string }; error?: string }>
+        pickXshell: () => Promise<{ success: boolean; data?: { path: string }; error?: string }>
+        detectOpenSsh: () => Promise<{ success: boolean; data?: { path: string }; error?: string }>
+        pickFile: () => Promise<{ success: boolean; data?: { path: string }; error?: string }>
       }
       window: {
         minimize: () => Promise<void>

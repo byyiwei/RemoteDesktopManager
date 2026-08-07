@@ -8,12 +8,18 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 // ======================== 类型定义（供渲染进程 TypeScript 使用）========================
 
+export type SshClientType = 'xshell' | 'openssh' | 'custom'
+
 export interface TraySettings {
   enableTray: boolean
   minimizeToTray: boolean
   closeToTray: boolean
   shortcutKey: string
   shortcutEnabled: boolean
+  xshellPath: string
+  sshClientType: SshClientType
+  sshCustomPath: string
+  sshCustomArgs: string
 }
 
 export interface RDM_API {
@@ -52,7 +58,11 @@ export interface RDM_API {
     setAutoStart: (enabled: boolean) => Promise<{ success: boolean; error?: string }>
     createDesktopShortcut: () => Promise<{ success: boolean; message?: string; error?: string }>
     getTraySettings: () => Promise<{ success: boolean; data?: TraySettings; error?: string }>
-    setTraySettings: (settings: Partial<TraySettings>) => Promise<{ success: boolean; data?: TraySettings; error?: string }>
+    setTraySettings: (settings: Partial<TraySettings>) => Promise<{ success: boolean; data?: TraySettings; error?: string; shortcutRegistered?: boolean; shortcutError?: string }>
+    detectXshell: () => Promise<{ success: boolean; data?: { path: string }; error?: string }>
+    pickXshell: () => Promise<{ success: boolean; data?: { path: string }; error?: string }>
+    detectOpenSsh: () => Promise<{ success: boolean; data?: { path: string }; error?: string }>
+    pickFile: () => Promise<{ success: boolean; data?: { path: string }; error?: string }>
   }
   window: {
     minimize: () => Promise<void>
@@ -152,7 +162,11 @@ contextBridge.exposeInMainWorld('rdm', {
     setAutoStart: (enabled: boolean) => ipcRenderer.invoke('settings:setAutoStart', enabled),
     createDesktopShortcut: () => ipcRenderer.invoke('settings:createDesktopShortcut'),
     getTraySettings: () => ipcRenderer.invoke('settings:getTraySettings'),
-    setTraySettings: (settings: Partial<TraySettings>) => ipcRenderer.invoke('settings:setTraySettings', settings)
+    setTraySettings: (settings: Partial<TraySettings>) => ipcRenderer.invoke('settings:setTraySettings', settings),
+    detectXshell: () => ipcRenderer.invoke('settings:detectXshell'),
+    pickXshell: () => ipcRenderer.invoke('settings:pickXshell'),
+    detectOpenSsh: () => ipcRenderer.invoke('settings:detectOpenSsh'),
+    pickFile: () => ipcRenderer.invoke('settings:pickFile')
   },
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

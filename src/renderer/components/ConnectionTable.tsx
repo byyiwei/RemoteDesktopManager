@@ -87,6 +87,9 @@ const ConnectionTable: React.FC<Props> = ({
                   <span className="connection-card-name" title={r.clientName}>
                     {r.clientName}
                   </span>
+                  <span className={`connection-card-type ${r.serverType === 'linux' ? 'type-linux' : 'type-windows'}`}>
+                    {r.serverType === 'linux' ? 'Linux' : 'Windows'}
+                  </span>
                   <div className="connection-card-actions">
                     <button
                       className="connection-card-action-btn"

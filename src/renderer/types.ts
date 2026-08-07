@@ -22,10 +22,14 @@ export const BASTION_HOST_OPTIONS: BastionHostOption[] = [
   { key: 'hillstone',   label: 'Hillstone',         color: '#1e40af' },
 ]
 
+/** 服务器系统类型 */
+export type ServerType = 'windows' | 'linux'
+
 /** 前端展示用的连接数据 */
 export interface ConnectionDisplay {
   id: string
   clientName: string
+  serverType: ServerType
   ipAddress: string
   port: number
   username: string
@@ -38,6 +42,7 @@ export interface ConnectionDisplay {
 /** 新建连接输入 */
 export interface CreateConnectionInput {
   clientName: string
+  serverType?: ServerType
   ipAddress: string
   port: number
   username: string
@@ -49,6 +54,7 @@ export interface CreateConnectionInput {
 export interface UpdateConnectionInput {
   id: string
   clientName?: string
+  serverType?: ServerType
   ipAddress?: string
   port?: number
   username?: string
@@ -66,6 +72,9 @@ export interface Shortcut {
   createdAt: string
 }
 
+/** SSH 连接工具类型 */
+export type SshClientType = 'xshell' | 'openssh' | 'custom'
+
 /** 托盘设置 */
 export interface TraySettings {
   enableTray: boolean
@@ -73,4 +82,8 @@ export interface TraySettings {
   closeToTray: boolean
   shortcutKey: string
   shortcutEnabled: boolean
+  xshellPath: string
+  sshClientType: SshClientType
+  sshCustomPath: string
+  sshCustomArgs: string
 }

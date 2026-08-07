@@ -3,7 +3,7 @@
  * 负责创建窗口、初始化应用、注册 IPC 处理器
  */
 
-import { app, BrowserWindow, shell, Menu, nativeImage, Tray, globalShortcut } from 'electron'
+import { app, BrowserWindow, shell, Menu, nativeImage, Tray, globalShortcut, Notification } from 'electron'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { registerIpcHandlers } from './ipcHandlers'
@@ -242,14 +242,31 @@ function createTray(): void {
 }
 
 /**
- * 注册全局快捷键
+ * 快捷键注册失败时弹出系统通知，避免用户静默失效
  */
-function registerGlobalShortcut(shortcutKey: string): void {
+function showShortcutFailedNotification(shortcutKey: string, reason: string): void {
+  try {
+    new Notification({
+      title: APP_NAME,
+      body: `快捷键 ${shortcutKey} 注册失败：${reason}，请更换其他快捷键`
+    }).show()
+    console.warn(`[shortcut] 已发送注册失败通知: ${shortcutKey} (${reason})`)
+  } catch (error) {
+    console.warn('[shortcut] 发送通知失败:', error)
+  }
+}
+
+/**
+ * 注册全局快捷键
+ * 返回是否注册成功
+ */
+function registerGlobalShortcut(shortcutKey: string): boolean {
   // 先注销已注册的快捷键
   globalShortcut.unregisterAll()
 
+  let ret = false
   try {
-    const ret = globalShortcut.register(shortcutKey, () => {
+    ret = globalShortcut.register(shortcutKey, () => {
       toggleWindow()
     })
 
@@ -257,17 +274,21 @@ function registerGlobalShortcut(shortcutKey: string): void {
       console.log(`[shortcut] 全局快捷键已注册: ${shortcutKey}`)
     } else {
       console.warn(`[shortcut] 快捷键注册失败: ${shortcutKey}，可能被其他程序占用`)
+      showShortcutFailedNotification(shortcutKey, '该快捷键可能已被其他程序占用')
     }
   } catch (error) {
     console.error(`[shortcut] 快捷键注册异常:`, error)
+    showShortcutFailedNotification(shortcutKey, '快捷键格式无效')
   }
+  return ret
 }
 
 /**
  * 重新注册快捷键
+ * 返回是否注册成功
  */
-export function reRegisterGlobalShortcut(shortcutKey: string): void {
-  registerGlobalShortcut(shortcutKey)
+export function reRegisterGlobalShortcut(shortcutKey: string): boolean {
+  return registerGlobalShortcut(shortcutKey)
 }
 
 app.whenReady().then(async () => {
@@ -315,7 +336,7 @@ app.whenReady().then(async () => {
   // 设置窗口最小化和关闭行为
   if (mainWindow) {
     // 最小化到托盘
-    mainWindow.on('minimize', (event) => {
+    mainWindow.on('minimize', (event: Electron.Event) => {
       const currentSettings = getSettings()
       if (currentSettings.minimizeToTray && currentSettings.enableTray) {
         event.preventDefault()
@@ -325,9 +346,9 @@ app.whenReady().then(async () => {
     })
 
     // 关闭到托盘
-    mainWindow.on('close', (event) => {
+    mainWindow.on('close', (event: Electron.Event) => {
       const currentSettings = getSettings()
-      if (currentSettings.closeToTray && currentSettings.enableTray && !app.isQuiting) {
+      if (currentSettings.closeToTray && currentSettings.enableTray && !(app as any).isQuiting) {
         event.preventDefault()
         mainWindow?.hide()
         console.log('[window] 关闭到托盘')
@@ -341,7 +362,7 @@ app.whenReady().then(async () => {
 })
 
 app.on('before-quit', () => {
-  app.isQuiting = true
+  ;(app as any).isQuiting = true
   globalShortcut.unregisterAll()
 })
 

@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { Modal, Form, Input, InputNumber, Checkbox } from 'antd'
+import { Modal, Form, Input, InputNumber, Checkbox, Segmented } from 'antd'
 import {
   UserOutlined,
   LockOutlined,
@@ -13,7 +13,7 @@ import {
   SafetyCertificateOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons'
-import type { ConnectionDisplay, CreateConnectionInput } from '../types'
+import type { ConnectionDisplay, CreateConnectionInput, ServerType } from '../types'
 import { BASTION_HOST_OPTIONS } from '../types'
 
 interface Props {
@@ -28,6 +28,7 @@ const DEFAULT_USERNAME = 'Administrator'
 const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, onCancel }) => {
   const [form] = Form.useForm()
   const [bastionExpanded, setBastionExpanded] = useState(false)
+  const [serverType, setServerType] = useState<ServerType>('windows')
   const isEdit = editingConnection !== null
 
   useEffect(() => {
@@ -35,6 +36,7 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
       if (editingConnection) {
         form.setFieldsValue({
           clientName: editingConnection.clientName,
+          serverType: editingConnection.serverType || 'windows',
           ipAddress: editingConnection.ipAddress,
           port: editingConnection.port,
           username: editingConnection.username,
@@ -42,14 +44,31 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
           bastionHosts: editingConnection.bastionHosts || [],
           customBastion: ''
         })
+        setServerType(editingConnection.serverType || 'windows')
         setBastionExpanded((editingConnection.bastionHosts || []).length > 0)
       } else {
         form.resetFields()
-        form.setFieldsValue({ port: 3389, username: DEFAULT_USERNAME, bastionHosts: [], customBastion: '' })
+        form.setFieldsValue({ serverType: 'windows', port: 3389, username: DEFAULT_USERNAME, bastionHosts: [], customBastion: '' })
+        setServerType('windows')
         setBastionExpanded(false)
       }
     }
   }, [visible, editingConnection])
+
+  const handleTypeChange = (val: ServerType) => {
+    setServerType(val)
+    form.setFieldsValue({ serverType: val })
+    // 切换系统类型时联动默认端口和用户名，已手动修改过的保留
+    const port = form.getFieldValue('port')
+    const username = form.getFieldValue('username')
+    if (val === 'linux') {
+      if (port === undefined || port === 3389) form.setFieldsValue({ port: 22 })
+      if (!username || username === DEFAULT_USERNAME) form.setFieldsValue({ username: 'root' })
+    } else {
+      if (port === 22) form.setFieldsValue({ port: 3389 })
+      if (username === 'root') form.setFieldsValue({ username: DEFAULT_USERNAME })
+    }
+  }
 
   const handleOk = async () => {
     const v = await form.validateFields()
@@ -63,9 +82,10 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
     }
     onSave({
       clientName: v.clientName,
+      serverType: v.serverType === 'linux' ? 'linux' : 'windows',
       ipAddress: v.ipAddress,
-      port: v.port ?? 3389,
-      username: (v.username || '').trim() || DEFAULT_USERNAME,
+      port: v.port ?? (v.serverType === 'linux' ? 22 : 3389),
+      username: (v.username || '').trim() || (v.serverType === 'linux' ? 'root' : DEFAULT_USERNAME),
       password: v.password || '',
       bastionHosts,
       ...(isEdit && editingConnection ? { id: editingConnection.id } : {})
@@ -99,6 +119,22 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
             <InfoCircleOutlined />
             基本信息
           </div>
+
+          <Form.Item
+            name="serverType"
+            label="系统类型"
+            initialValue="windows"
+          >
+            <Segmented
+              value={serverType}
+              onChange={(val) => handleTypeChange(val as ServerType)}
+              options={[
+                { label: 'Windows（RDP）', value: 'windows' },
+                { label: 'Linux（SSH）', value: 'linux' },
+              ]}
+              block
+            />
+          </Form.Item>
 
           <Form.Item
             name="clientName"
@@ -144,7 +180,7 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
               className="form-row-item form-row-port"
             >
               <InputNumber
-                placeholder="3389"
+                placeholder={serverType === 'linux' ? '22' : '3389'}
                 min={1}
                 max={65535}
                 style={{ width: '100%' }}
@@ -159,7 +195,7 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
               className="form-row-item form-row-user"
             >
               <Input
-                placeholder="Administrator"
+                placeholder={serverType === 'linux' ? 'root' : 'Administrator'}
                 prefix={<UserOutlined style={{ color: '#9ca3af' }} />}
                 maxLength={128}
                 allowClear
@@ -180,7 +216,7 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
             rules={isEdit ? [] : [{ required: true, message: '请输入密码' }]}
           >
             <Input.Password
-              placeholder={isEdit ? '留空则不修改密码' : '输入远程桌面密码'}
+              placeholder={isEdit ? '留空则不修改密码' : (serverType === 'linux' ? '输入服务器登录密码' : '输入远程桌面密码')}
               prefix={<LockOutlined style={{ color: '#9ca3af' }} />}
               maxLength={128}
             />

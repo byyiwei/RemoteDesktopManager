@@ -24,6 +24,7 @@ import {
 } from './store'
 import { encryptPassword, decryptPassword, portableEncrypt, portableDecrypt, isEncryptionAvailable, verifyWindowsPassword } from './crypto'
 import { startRdpConnection, validateIp, validatePort } from './rdp'
+import { startSshConnection, findXshellPath, findOpenSshPath } from './ssh'
 
 // ======================== 图标提取工具 ========================
 
@@ -240,19 +241,31 @@ export function registerIpcHandlers(): void {
         return { success: false, error: '密码为空，无法连接' }
       }
 
-      // 启动 RDP 连接（此操作为异步阻塞，等待 mstsc 关闭）
-      const result = await startRdpConnection(
-        connection.ipAddress,
-        connection.port,
-        connection.username,
-        decryptedPassword
-      )
+      // 根据系统类型分流：windows -> RDP/mstsc，linux -> SSH/Xshell
+      let result
+      if (connection.serverType === 'linux') {
+        console.log('🚀 启动 Linux SSH 连接:', connection.clientName)
+        result = await startSshConnection(
+          connection.ipAddress,
+          connection.port,
+          connection.username,
+          decryptedPassword
+        )
+      } else {
+        // 启动 RDP 连接（此操作为异步阻塞，等待 mstsc 关闭）
+        result = await startRdpConnection(
+          connection.ipAddress,
+          connection.port,
+          connection.username,
+          decryptedPassword
+        )
+      }
 
       return { success: true, message: result.message }
     } catch (error) {
       return {
         success: false,
-        error: `RDP 连接失败: ${(error as Error).message}`
+        error: `连接失败: ${(error as Error).message}`
       }
     }
   })
@@ -329,7 +342,15 @@ ipcMain.handle('settings:setTraySettings', async (_event, settings: any) => {
     if (settings.shortcutKey !== undefined || settings.shortcutEnabled !== undefined) {
       const { reRegisterGlobalShortcut } = require('./index')
       if (result.shortcutEnabled && result.shortcutKey) {
-        reRegisterGlobalShortcut(result.shortcutKey)
+        const ok = reRegisterGlobalShortcut(result.shortcutKey)
+        return {
+          success: true,
+          data: result,
+          shortcutRegistered: ok,
+          shortcutError: ok
+            ? ''
+            : `快捷键 ${result.shortcutKey} 注册失败，可能与其他程序冲突，请更换其他快捷键`
+        }
       } else {
         const { globalShortcut } = require('electron')
         globalShortcut.unregisterAll()
@@ -339,6 +360,61 @@ ipcMain.handle('settings:setTraySettings', async (_event, settings: any) => {
     return { success: true, data: result }
   } catch (error) {
     return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('settings:detectXshell', async () => {
+  try {
+    const path = await findXshellPath()
+    return { success: true, data: { path } }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('settings:pickXshell', async (event) => {
+  try {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = await dialog.showOpenDialog(win!, {
+      title: '选择 Xshell 可执行文件',
+      filters: [{ name: 'Xshell', extensions: ['exe'] }],
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: '用户取消' }
+    }
+    return { success: true, data: { path: result.filePaths[0] } }
+  } catch (error) {
+    return { success: false, error: `选择文件失败: ${(error as Error).message}` }
+  }
+})
+
+ipcMain.handle('settings:detectOpenSsh', async () => {
+  try {
+    const path = await findOpenSshPath()
+    return { success: true, data: { path } }
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+})
+
+ipcMain.handle('settings:pickFile', async (event) => {
+  try {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = await dialog.showOpenDialog(win!, {
+      title: '选择终端工具可执行文件',
+      filters: [
+        { name: '可执行文件', extensions: ['exe', 'lnk', 'bat', 'cmd', 'com'] },
+        { name: '所有文件', extensions: ['*'] }
+      ],
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: '用户取消' }
+    }
+    return { success: true, data: { path: result.filePaths[0] } }
+  } catch (error) {
+    return { success: false, error: `选择文件失败: ${(error as Error).message}` }
   }
 })
 
@@ -412,7 +488,7 @@ ipcMain.handle('settings:createDesktopShortcut', async () => {
 
       // 用 portableEncrypt 加密密码（可跨机器使用）
       const exportData = {
-        version: '2.0',
+        version: '2.1',
         exportedAt: new Date().toISOString(),
         count: rawConnections.length,
         connections: rawConnections.map(c => {
@@ -427,6 +503,7 @@ ipcMain.handle('settings:createDesktopShortcut', async () => {
           }
           return {
             clientName: c.clientName,
+            serverType: c.serverType || 'windows',
             ipAddress: c.ipAddress,
             port: c.port,
             username: c.username,
