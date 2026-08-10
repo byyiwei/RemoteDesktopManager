@@ -1,0 +1,20 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="openget logo">
+  <defs>
+    <linearGradient id="ogBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B8BFF"/>
+      <stop offset="100%" stop-color="#1E4FD6"/>
+    </linearGradient>
+    <linearGradient id="ogArrow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFB23E"/>
+      <stop offset="100%" stop-color="#F99C00"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="url(#ogBg)"/>
+  <!-- 右上点缀：致敬原 logo 的小圆，并呼应橙色副品牌色 -->
+  <circle cx="198" cy="62" r="9" fill="#FFB23E"/>
+  <!-- 白色圆环 = O / open（中心开放） -->
+  <circle cx="128" cy="104" r="52" fill="none" stroke="#FFFDF9" stroke-width="20"/>
+  <!-- 橙色向下箭头 = get / 获取 -->
+  <path d="M128 148 V206" stroke="url(#ogArrow)" stroke-width="20" stroke-linecap="round"/>
+  <path d="M100 180 L128 208 L156 180" stroke="url(#ogArrow)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

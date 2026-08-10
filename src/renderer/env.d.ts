@@ -95,6 +95,9 @@ declare global {
         launch: (id: string) => Promise<{ success: boolean; message?: string; error?: string }>
         pickFile: () => Promise<{ success: boolean; data?: { name: string; exePath: string; iconData?: string }; error?: string }>
       }
+      clipboard: {
+        write: (text: string) => Promise<{ success: boolean; error?: string }>
+      }
     }
   }
 }

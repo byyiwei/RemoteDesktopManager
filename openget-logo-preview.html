@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>openget · Logo 预览</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --line:#30363d; --txt:#e6edf3; --sub:#8b949e;
+    --blue:#3080ff; --orange:#f99c00;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.6 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;padding:32px}
+  h1{margin:0 0 4px;font-size:22px}
+  .sub{color:var(--sub);margin:0 0 28px}
+  .sec{margin:0 0 30px}
+  .sec h2{font-size:14px;color:var(--sub);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin:0 0 14px}
+  .cards{display:flex;flex-wrap:wrap;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:10px}
+  .card span{color:var(--sub);font-size:12px}
+  .on-light{background:#fafaf9}
+  .on-dark{background:#0c0a09}
+  .on-blue{background:#1E4FD6}
+  .row{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+  code{background:#010409;border:1px solid var(--line);padding:2px 7px;border-radius:6px;color:#a5d6ff;font-size:12px}
+  .wm{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .wm.light{background:#fafaf9}
+</style>
+</head>
+<body>
+  <h1>openget · 标志设计</h1>
+  <p class="sub">矢量 SVG · 纯图标版 + 横版（图标+文字）· 品牌色延续现有站点：stone 暖灰 + 蓝 #3080ff + 橙 #f99c00。</p>
+
+  <div class="sec">
+    <h2>① 纯图标（open = 白色圆环 / 开放）</h2>
+    <div class="cards">
+      <div class="card on-light"><img src="openget-logo.svg" width="120" height="120"/><span>浅色背景</span></div>
+      <div class="card on-dark"><img src="openget-logo.svg" width="120" height="120"/><span>深色背景</span></div>
+      <div class="card on-blue"><img src="openget-logo.svg" width="120" height="120"/><span>蓝色背景</span></div>
+      <div class="card"><img src="openget-logo.svg" width="120" height="120"/><span>透明背景</span></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>② 横版（图标 + openget 文字，open 蓝 / get 橙）</h2>
+    <div class="wm"><img src="openget-logo-wordmark.svg" width="300" height="90"/></div>
+    <div class="wm light" style="margin-top:14px"><img src="openget-logo-wordmark.svg" width="300" height="90"/></div>
+  </div>
+
+  <div class="sec">
+    <h2>设计语汇</h2>
+    <div class="row">
+      <div class="card"><img src="openget-logo.svg" width="90" height="90" style="background:#1E4FD6;border-radius:18px"/><span>白环 = O / open（开放）</span></div>
+      <div class="card"><img src="openget-logo.svg" width="90" height="90" style="background:#1E4FD6;border-radius:18px"/><span>橙箭头 = get（获取）</span></div>
+      <div class="card"><img src="openget-logo.svg" width="90" height="90" style="background:#1E4FD6;border-radius:18px"/><span>橙点 = 致敬原 logo</span></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>调色板</h2>
+    <div class="row">
+      <div class="card" style="flex-direction:row"><span style="color:var(--blue)">● 品牌蓝 #3080ff</span></div>
+      <div class="card" style="flex-direction:row"><span style="color:var(--orange)">● 品牌橙 #f99c00</span></div>
+      <div class="card" style="flex-direction:row"><span>● 近白 #FFFDF9</span></div>
+      <div class="card" style="flex-direction:row"><span>● stone #1c1917</span></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>使用</h2>
+    <p class="sub">纯图标 <code>openget-logo.svg</code> → 覆盖 <code>/www/wwwroot/openget.cn/ui_out/logo.svg</code> 即可替换线上图标。横版 <code>openget-logo-wordmark.svg</code> 用于导航栏/页脚/文档头。作 favicon 用纯图标版即可。</p>
+  </div>
+</body>
+</html>

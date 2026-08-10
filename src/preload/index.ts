@@ -79,6 +79,9 @@ export interface RDM_API {
     launch: (id: string) => Promise<{ success: boolean; message?: string; error?: string }>
     pickFile: () => Promise<{ success: boolean; data?: { name: string; exePath: string; iconData?: string }; error?: string }>
   }
+  clipboard: {
+    write: (text: string) => Promise<{ success: boolean; error?: string }>
+  }
 }
 
 /**
@@ -183,5 +186,8 @@ contextBridge.exposeInMainWorld('rdm', {
     reorder: (orderedIds: string[]) => ipcRenderer.invoke('shortcut:reorder', orderedIds),
     launch: (id: string) => ipcRenderer.invoke('shortcut:launch', id),
     pickFile: () => ipcRenderer.invoke('shortcut:pickFile')
+  },
+  clipboard: {
+    write: (text: string) => ipcRenderer.invoke('clipboard:write', text)
   }
 })

@@ -149,29 +149,30 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
             />
           </Form.Item>
 
-          <Form.Item
-            name="ipAddress"
-            label="IP 地址"
-            rules={[
-              { required: true, message: '请输入 IP 地址' },
-              { pattern: /^(\d{1,3}\.){3}\d{1,3}$/, message: '请输入有效的 IPv4 地址' },
-              {
-                validator: (_, v) =>
-                  v && v.split('.').every((p: string) => +p >= 0 && +p <= 255)
-                    ? Promise.resolve()
-                    : Promise.reject('IP 各段需在 0-255 之间')
-              }
-            ]}
-          >
-            <Input
-              placeholder="192.168.1.100"
-              prefix={<GlobalOutlined style={{ color: '#9ca3af' }} />}
-              maxLength={15}
-              allowClear
-            />
-          </Form.Item>
-
           <div className="form-row">
+            <Form.Item
+              name="ipAddress"
+              label="IP 地址"
+              rules={[
+                { required: true, message: '请输入 IP 地址' },
+                { pattern: /^(\d{1,3}\.){3}\d{1,3}$/, message: '请输入有效的 IPv4 地址' },
+                {
+                  validator: (_, v) =>
+                    v && v.split('.').every((p: string) => +p >= 0 && +p <= 255)
+                      ? Promise.resolve()
+                      : Promise.reject('IP 各段需在 0-255 之间')
+                }
+              ]}
+              className="form-row-item form-row-ip"
+            >
+              <Input
+                placeholder="192.168.1.100"
+                prefix={<GlobalOutlined style={{ color: '#9ca3af' }} />}
+                maxLength={15}
+                allowClear
+              />
+            </Form.Item>
+
             <Form.Item
               name="port"
               label="端口"
@@ -187,7 +188,16 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
                 prefix={<NumberOutlined style={{ color: '#9ca3af', marginRight: 4 }} />}
               />
             </Form.Item>
+          </div>
+        </div>
 
+        <div className="form-section">
+          <div className="form-section-title">
+            <LockOutlined />
+            安全凭证
+          </div>
+
+          <div className="form-row">
             <Form.Item
               name="username"
               label="用户名"
@@ -201,26 +211,20 @@ const ConnectionForm: React.FC<Props> = ({ visible, editingConnection, onSave, o
                 allowClear
               />
             </Form.Item>
-          </div>
-        </div>
 
-        <div className="form-section">
-          <div className="form-section-title">
-            <LockOutlined />
-            安全凭证
+            <Form.Item
+              name="password"
+              label={isEdit ? '密码（留空不修改）' : '密码'}
+              rules={isEdit ? [] : [{ required: true, message: '请输入密码' }]}
+              className="form-row-item form-row-password"
+            >
+              <Input.Password
+                placeholder={isEdit ? '留空则不修改密码' : (serverType === 'linux' ? '输入服务器登录密码' : '输入远程桌面密码')}
+                prefix={<LockOutlined style={{ color: '#9ca3af' }} />}
+                maxLength={128}
+              />
+            </Form.Item>
           </div>
-
-          <Form.Item
-            name="password"
-            label={isEdit ? '密码（留空不修改）' : '密码'}
-            rules={isEdit ? [] : [{ required: true, message: '请输入密码' }]}
-          >
-            <Input.Password
-              placeholder={isEdit ? '留空则不修改密码' : (serverType === 'linux' ? '输入服务器登录密码' : '输入远程桌面密码')}
-              prefix={<LockOutlined style={{ color: '#9ca3af' }} />}
-              maxLength={128}
-            />
-          </Form.Item>
 
           <Form.Item>
             <div

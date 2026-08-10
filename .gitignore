@@ -2,5 +2,6 @@ node_modules/
 out/
 release/
 dist/
+.workbuddy/
 *.log
 .DS_Store

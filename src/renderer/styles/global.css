@@ -454,6 +454,37 @@ body {
   color: var(--color-text-secondary);
 }
 
+/* 可复制元素 */
+.connection-card-copy,
+.password-reveal-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.connection-card-copy:hover,
+.password-reveal-copy:hover {
+  color: var(--color-primary);
+}
+
+.copy-icon {
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.connection-card-copy:hover .copy-icon,
+.password-reveal-copy:hover .copy-icon {
+  opacity: 1;
+}
+
 .connection-card-actions {
   display: flex;
   gap: 4px;
@@ -579,10 +610,13 @@ body {
   color: var(--color-danger);
   font-weight: 600;
   font-size: 13px;
+  max-width: 100%;
+}
+
+.password-reveal-text-inner {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
 }
 .password-reveal-timer { font-size: 11px; color: var(--color-text-muted); margin-left: auto; }
 
@@ -788,10 +822,10 @@ body {
 }
 
 /* ======================== 表单 ======================== */
-.form-modern .ant-form-item-label { padding-bottom: 4px; }
-.form-modern .ant-form-item-label > label { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); }
+.form-modern .ant-form-item-label { padding-bottom: 3px; }
+.form-modern .ant-form-item-label > label { font-size: 12.5px; font-weight: 500; color: var(--color-text-secondary); }
 
-.form-modern .ant-form-item { margin-bottom: 10px; }
+.form-modern .ant-form-item { margin-bottom: 8px; }
 .form-modern .ant-form-item:last-child { margin-bottom: 0; }
 
 .form-modern .ant-input,
@@ -822,11 +856,15 @@ body {
 .conn-form-modal.ant-modal-content,
 .conn-form-modal .ant-modal-content { max-height: none; overflow: visible; }
 
+.conn-form-modal .ant-modal-header { padding: 12px 16px; }
+.conn-form-modal .ant-modal-title { font-size: 15px; }
+.conn-form-modal .ant-modal-footer { padding: 10px 16px; }
+
 .conn-form-modal .form-modern {
-  padding: 12px 18px 14px;
+  padding: 10px 16px 12px;
 }
 
-.form-section { margin-bottom: 12px; }
+.form-section { margin-bottom: 10px; }
 .form-section:last-child { margin-bottom: 0; }
 
 .form-section-title {
@@ -837,7 +875,7 @@ body {
   font-weight: 600;
   color: var(--color-text-secondary);
   letter-spacing: 0.3px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .form-section-title::after {
@@ -851,8 +889,10 @@ body {
 
 .form-row { display: flex; gap: 10px; }
 .form-row-item { margin-bottom: 0; }
-.form-row-port { flex: 0 0 110px; }
-.form-row-user { flex: 1; }
+.form-row-ip { flex: 1; min-width: 0; }
+.form-row-port { flex: 0 0 100px; }
+.form-row-user { flex: 1; min-width: 0; }
+.form-row-password { flex: 1; min-width: 0; }
 
 /* ======================== 标签 ======================== */
 .tag-modern { border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; }

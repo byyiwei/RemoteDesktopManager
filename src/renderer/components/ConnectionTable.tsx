@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { Spin, Tag, Tooltip } from 'antd'
+import { App as AntdApp, Spin, Tag, Tooltip } from 'antd'
 import {
   EditOutlined,
   DeleteOutlined,
@@ -17,6 +17,7 @@ import {
   PlayCircleOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
+  CopyOutlined,
 } from '@ant-design/icons'
 import type { ConnectionDisplay } from '../types'
 import { BASTION_HOST_OPTIONS } from '../types'
@@ -39,6 +40,22 @@ const ConnectionTable: React.FC<Props> = ({
   connections, loading, connectingId, selectedIndex, revealedPasswords,
   onEdit, onDelete, onConnect, onViewPassword
 }) => {
+  const { message } = AntdApp.useApp()
+
+  // 复制文本到剪贴板
+  const handleCopy = async (text: string, label: string) => {
+    try {
+      if (window.rdm?.clipboard) {
+        const r = await window.rdm.clipboard.write(text)
+        if (!r.success) throw new Error(r.error || '复制失败')
+      } else {
+        await navigator.clipboard.writeText(text)
+      }
+      message.success(`${label}已复制`)
+    } catch (e) {
+      message.error(`复制失败: ${(e as Error).message}`)
+    }
+  }
 
   if (loading) {
     return (
@@ -111,7 +128,15 @@ const ConnectionTable: React.FC<Props> = ({
                 <div className="connection-card-meta">
                   <span className="connection-card-meta-item">
                     <GlobalOutlined />
-                    <span className="connection-card-ip">{r.ipAddress}:{r.port}</span>
+                    <Tooltip title="点击复制 IP:端口">
+                      <button
+                        className="connection-card-ip connection-card-copy"
+                        onClick={(e) => { e.stopPropagation(); handleCopy(`${r.ipAddress}:${r.port}`, 'IP') }}
+                      >
+                        <span>{r.ipAddress}:{r.port}</span>
+                        <CopyOutlined className="copy-icon" />
+                      </button>
+                    </Tooltip>
                   </span>
                   <span className="connection-card-meta-item">
                     <UserOutlined />
@@ -166,7 +191,15 @@ const ConnectionTable: React.FC<Props> = ({
                 {revealedPasswords[r.id] && (
                   <div className="password-reveal-box">
                     <LockOutlined className="password-reveal-icon" />
-                    <span className="password-reveal-text">{revealedPasswords[r.id]}</span>
+                    <Tooltip title="点击复制密码">
+                      <button
+                        className="password-reveal-text password-reveal-copy"
+                        onClick={(e) => { e.stopPropagation(); handleCopy(revealedPasswords[r.id], '密码') }}
+                      >
+                        <span className="password-reveal-text-inner">{revealedPasswords[r.id]}</span>
+                        <CopyOutlined className="copy-icon" />
+                      </button>
+                    </Tooltip>
                     <span className="password-reveal-timer">（30秒后隐藏）</span>
                   </div>
                 )}

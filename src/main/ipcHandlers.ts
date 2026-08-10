@@ -3,7 +3,7 @@
  * 注册所有主进程与渲染进程之间的 IPC 通信通道
  */
 
-import { ipcMain, app, BrowserWindow, dialog, shell } from 'electron'
+import { ipcMain, app, BrowserWindow, dialog, shell, clipboard } from 'electron'
 import { join, dirname } from 'path'
 import { readFile, writeFile } from 'fs/promises'
 import {
@@ -655,6 +655,20 @@ ipcMain.handle('settings:createDesktopShortcut', async () => {
   })
 
   console.log('✅ IPC 处理器注册完成')
+
+  // ======================== 剪贴板 ========================
+
+  /**
+   * 复制文本到系统剪贴板
+   */
+  ipcMain.handle('clipboard:write', (_event, text: string) => {
+    try {
+      clipboard.writeText(String(text ?? ''))
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: `复制失败: ${(error as Error).message}` }
+    }
+  })
 
   // ======================== 快捷方式 ========================
 
