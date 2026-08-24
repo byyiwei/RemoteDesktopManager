@@ -3,7 +3,7 @@
  * 适配竖屏 1000x1300 窗口，每行一个连接，信息横向排列
  */
 
-import React, { useState, useRef, useEffect } from 'react'
+import React from 'react'
 import { App as AntdApp, Spin, Tag, Tooltip } from 'antd'
 import {
   EditOutlined,
@@ -18,8 +18,6 @@ import {
   EyeOutlined,
   EyeInvisibleOutlined,
   CopyOutlined,
-  VerticalAlignTopOutlined,
-  VerticalAlignBottomOutlined,
 } from '@ant-design/icons'
 import type { ConnectionDisplay } from '../types'
 import { BASTION_HOST_OPTIONS } from '../types'
@@ -43,53 +41,6 @@ const ConnectionTable: React.FC<Props> = ({
   onEdit, onDelete, onConnect, onViewPassword
 }) => {
   const { message } = AntdApp.useApp()
-
-  // 滚动到顶部/底部悬浮按钮逻辑
-  const scrollContainerRef = useRef<HTMLElement | null>(null)
-  const hideTimerRef = useRef<number | null>(null)
-  const [showScrollBtns, setShowScrollBtns] = useState(false)
-  const [atTop, setAtTop] = useState(true)
-  const [atBottom, setAtBottom] = useState(false)
-
-  useEffect(() => {
-    const grid = document.querySelector('.connection-grid')
-    const container = (grid?.closest('.app-content') as HTMLElement | null) ?? null
-    if (!container) return
-    scrollContainerRef.current = container
-
-    let justMounted = true
-    const onScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container
-      const scrollable = scrollHeight - clientHeight > 8
-      setAtTop(scrollTop <= 8)
-      setAtBottom(scrollTop + clientHeight >= scrollHeight - 8)
-      if (scrollable && !justMounted) {
-        setShowScrollBtns(true)
-        if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
-        hideTimerRef.current = window.setTimeout(() => setShowScrollBtns(false), 1800)
-      } else if (!scrollable) {
-        setShowScrollBtns(false)
-      }
-      justMounted = false
-    }
-
-    container.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
-    onScroll()
-    return () => {
-      container.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
-      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
-    }
-  }, [connections.length])
-
-  const scrollToTop = () => {
-    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-  const scrollToBottom = () => {
-    const el = scrollContainerRef.current
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-  }
 
   // 复制文本到剪贴板
   const handleCopy = async (text: string, label: string) => {
@@ -132,8 +83,7 @@ const ConnectionTable: React.FC<Props> = ({
   }
 
   return (
-    <>
-      <div className="connection-grid">
+    <div className="connection-grid">
       {connections.map((r, i) => {
         const isConnecting = connectingId === r.id
         const isDisabled = connectingId !== null && !isConnecting
@@ -277,22 +227,6 @@ const ConnectionTable: React.FC<Props> = ({
         )
       })}
     </div>
-
-    {showScrollBtns && (
-      <div className="scroll-fab-group">
-        {!atTop && (
-          <button className="scroll-fab" onClick={scrollToTop} title="回到顶部">
-            <VerticalAlignTopOutlined />
-          </button>
-        )}
-        {!atBottom && (
-          <button className="scroll-fab" onClick={scrollToBottom} title="去到底部">
-            <VerticalAlignBottomOutlined />
-          </button>
-        )}
-      </div>
-    )}
-    </>
   )
 }
 

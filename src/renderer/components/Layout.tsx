@@ -4,7 +4,7 @@
  * 竖屏优化：紧凑工具栏，次要功能收纳进下拉菜单
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Button, Input, Switch, Tooltip, message, Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
 import {
@@ -17,6 +17,8 @@ import {
   DesktopOutlined,
   SettingOutlined,
   LinkOutlined,
+  VerticalAlignTopOutlined,
+  VerticalAlignBottomOutlined,
 } from '@ant-design/icons'
 import TitleBar from './TitleBar'
 
@@ -40,6 +42,51 @@ const Layout: React.FC<LayoutProps> = ({ children, onAdd, onServerSearch, onServ
   const [autoStartLoading, setAutoStartLoading] = useState(true)
   const [messageApi, contextHolder] = message.useMessage()
   const isElectron = !!window.rdm
+
+  // 滚动到顶部/底部悬浮按钮逻辑
+  const contentRef = useRef<HTMLDivElement | null>(null)
+  const hideTimerRef = useRef<number | null>(null)
+  const [showScrollBtns, setShowScrollBtns] = useState(false)
+  const [atTop, setAtTop] = useState(true)
+  const [atBottom, setAtBottom] = useState(false)
+
+  useEffect(() => {
+    const container = contentRef.current
+    if (!container) return
+
+    let justMounted = true
+    const onScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const scrollable = scrollHeight - clientHeight > 8
+      setAtTop(scrollTop <= 8)
+      setAtBottom(scrollTop + clientHeight >= scrollHeight - 8)
+      if (scrollable && !justMounted) {
+        setShowScrollBtns(true)
+        if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
+        hideTimerRef.current = window.setTimeout(() => setShowScrollBtns(false), 1800)
+      } else if (!scrollable) {
+        setShowScrollBtns(false)
+      }
+      justMounted = false
+    }
+
+    container.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    onScroll()
+    return () => {
+      container.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
+    }
+  }, [])
+
+  const scrollToTop = () => {
+    contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  const scrollToBottom = () => {
+    const el = contentRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }
 
   useEffect(() => {
     if (window.rdm) {
@@ -217,9 +264,25 @@ const Layout: React.FC<LayoutProps> = ({ children, onAdd, onServerSearch, onServ
       </div>
 
       {/* 主体内容区 */}
-      <div className="app-content">
+      <div className="app-content" ref={contentRef}>
         {children}
       </div>
+
+      {/* 滚动到顶部 / 去到底部悬浮按钮 */}
+      {showScrollBtns && (
+        <div className="scroll-fab-group">
+          {!atTop && (
+            <button className="scroll-fab" onClick={scrollToTop} title="回到顶部">
+              <VerticalAlignTopOutlined />
+            </button>
+          )}
+          {!atBottom && (
+            <button className="scroll-fab" onClick={scrollToBottom} title="去到底部">
+              <VerticalAlignBottomOutlined />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
