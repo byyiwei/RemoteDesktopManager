@@ -132,7 +132,8 @@ const ConnectionTable: React.FC<Props> = ({
   }
 
   return (
-    <div className="connection-grid">
+    <>
+      <div className="connection-grid">
       {connections.map((r, i) => {
         const isConnecting = connectingId === r.id
         const isDisabled = connectingId !== null && !isConnecting
@@ -291,6 +292,7 @@ const ConnectionTable: React.FC<Props> = ({
         )}
       </div>
     )}
+    </>
   )
 }
 
